@@ -1,7 +1,7 @@
 package com.sixnothings.twitter.api
 
 import dispatch.oauth._
-import com.sixnothings.config.{ OCConfig }
+import com.sixnothings.config.{TwitterConfig, OCConfig}
 
 class Auth(callback: String) extends Exchange
 with DummyCallback
@@ -9,13 +9,13 @@ with SomeHttp
 with TwitterConsumer
 with TwitterEndpoints {
   val http = dispatch.Http
-  val accessKey = OCConfig.accessKey
+  val accessKey = TwitterConfig.accessKey
 }
 
 trait TwitterEndpoints extends SomeEndpoints {
-  val requestToken = OCConfig.twitterUrls("requestToken")
-  val accessToken  = OCConfig.twitterUrls("accessToken")
-  val authorize    = OCConfig.twitterUrls("authorize")
+  val requestToken = TwitterConfig.twitterUrls("requestToken")
+  val accessToken  = TwitterConfig.twitterUrls("accessToken")
+  val authorize    = TwitterConfig.twitterUrls("authorize")
 }
 
 trait DummyCallback extends SomeCallback {
@@ -23,5 +23,5 @@ trait DummyCallback extends SomeCallback {
 }
 
 trait TwitterConsumer extends SomeConsumer {
-  val consumer = OCConfig.consumerKey
+  val consumer = TwitterConfig.consumerKey
 }
