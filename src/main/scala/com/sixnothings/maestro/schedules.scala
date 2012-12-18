@@ -10,9 +10,14 @@ class HelloActor extends Actor {
   }
 }
 
+case object MySystem {
+  val system = ActorSystem("ScheduleSystem")
+  def apply() = system
+}
+
 object Main extends App {
   val message = "Hello"
-  val system = ActorSystem("ScheduleSystem")
+  val system = MySystem()
   import system.dispatcher
   val helloActor = system.actorOf(Props[HelloActor], name = "helloactor")
 
