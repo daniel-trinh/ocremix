@@ -4,10 +4,10 @@ import com.codahale.jerkson.Json._
 import dispatch._
 import java.util.concurrent.TimeUnit._
 import scala.xml
-import com.sixnothings.config.{ OCConfig }
+import com.sixnothings.config.{ OCRemixSettings }
 
 case object OCRemix extends Enumeration {
-  val rssUrl = url(OCConfig.rssUrl)
+  val rssUrl = url(OCRemixSettings.rssUrl)
 }
 
 case class RemixEntry(

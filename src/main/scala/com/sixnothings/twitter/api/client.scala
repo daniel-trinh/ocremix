@@ -9,21 +9,27 @@ import com.sixnothings.twitter.json._
 
 trait Tweetable {
   val twitterOauth: Auth
-  val charLimit = TwitterConfig.charLimit
+  val charLimit = TwitterSettings.charLimit
+
+  // this should match any valid http / ftp url, with or without the actual <protocol>:// string
   val urlRegex = """(((http|ftp|https|ftps|sftp)://)|(www\.))+(([a-zA-Z0-9\._-]+\.[a-zA-Z]{2,6})|([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))(/[a-zA-Z0-9&amp;%_\./-~-]*)?""".r
 
   /**
    * This variable is intended to be periodically set every day, by loading
    * directly from Twitter's help/configuration.json API request.
+   *
+   * @return The contents of the twitterConfiguration Agent.
    */
-  var twitterConfig: TwitterConfiguration
+  def twitterConfig: TwitterConfiguration = TwitterSettings.twitterConfiguration()
 
+  /**
+   * The underscore casing is due to how Jerkson requires constructor attributes
+   * to match key names
+   */
   def shortUrlLength: Int      = twitterConfig.short_url_length
   def shortUrlLengthHttps: Int = twitterConfig.short_url_length_https
 
-  def twitterUrlShortenerLength: Int = ???
-
-  def api = url(TwitterConfig.twitterUrls("api"))
+  def api = url(TwitterSettings.twitterUrls("api"))
 
   /**
    * Will trim a message if it will be longer than the Tweet character limit.
@@ -35,7 +41,7 @@ trait Tweetable {
    * Will simply trim characters from the end of the tweet, plus 2 for '.."
    *
    * @param message The message to check and trim if tweetable.
-   * @param maxLimit Loaded from TwitterConfig.charLimit by default -- pass this param
+   * @param maxLimit Loaded from TwitterSettings.charLimit by default -- pass this param
    *                 to override.
    * @return Trimmed message.
    */
@@ -56,7 +62,7 @@ trait Tweetable {
    * Figures out if the message's final length (after t.co shortening) can be tweeted.
    *
    * @param message The message to check for tweetability.
-   * @param maxLimit Loaded from TwitterConfig.charLimit by default -- pass this param
+   * @param maxLimit Loaded from TwitterSettings.charLimit by default -- pass this param
    *                 to override.
    * @return True if tweetable, false if not
    */
@@ -87,10 +93,6 @@ trait Tweetable {
 
 class TwitterClient(someOauth: Auth) extends Tweetable {
   val twitterOauth = someOauth
-  var twitterConfig: Either[String, TwitterConfiguration] = {
-    helpConfiguration().right.get
-
-  }
 
   def sendError(error: String) = ???
 

@@ -3,18 +3,18 @@
 ## main
 + figure out how to unwrap a promised either
 + implement email functionality
++ implement periodic scheduled updating of twitterConfig Agent
 
 ### rss parsing
 + figure out how to periodically schedule polling of rss feed
 + parse top 10 rss feed into RemixEntry case class list
 
 ### twitter api
-+ twitter helpConfig api call
 + twitter directMessage api call
 + twitter tweet api call
-+ json string to TwitterConfig object parsing
 + json string to Tweet object parsing
 + implement trimMethod
+
 ## test
 
 ### unit tests
@@ -28,3 +28,5 @@
 + investigate if having rigid case classes will be too brittle for parsing json
 
 # DONE
++ twitter helpConfig api call
++ json string to TwitterConfig object parsing
