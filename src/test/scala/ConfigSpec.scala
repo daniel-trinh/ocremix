@@ -1,6 +1,5 @@
 import org.scalatest.FunSpec
 import org.scalatest.BeforeAndAfter
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.ShouldMatchers
 import com.sixnothings.config._
 
