@@ -3,6 +3,9 @@ package com.sixnothings.maestro
 import akka.actor.{ Actor, ActorSystem, Props }
 import scala.concurrent.duration._
 
+/**
+ * Dummy actor used for testing to make sure Akka is set up properly
+ */
 class HelloActor extends Actor {
   def receive = {
     case "hello" => println("hello back at you")
@@ -10,8 +13,38 @@ class HelloActor extends Actor {
   }
 }
 
+/**
+ * Used to update the TwitterSettings.configuration Agent.
+ */
+class UpdateTwitterConfigActor extends Actor {
+  def receive = ???
+}
+
+/**
+ * Used primarily for sending error alerts to a panic twitter handle,
+ * in case something goes terribly wrong.
+ */
+class SendDirectMessageActor extends Actor {
+  def receive = ???
+}
+
+/**
+ * Used to Tweet messages to Twitter.
+ */
+class TweeterActor extends Actor {
+  def receive = ???
+}
+
+/**
+ * Parses OCRemix RSS XML into a tweetable format, and then sends a message
+ * to TweeterActor for tweeting.
+ */
+class OCRemixRSSParserActor extends Actor {
+  def receive = ???
+}
+
 case object MySystem {
-  val system = ActorSystem("ScheduleSystem")
+  val system = ActorSystem("Scheduler")
   def apply() = system
 }
 

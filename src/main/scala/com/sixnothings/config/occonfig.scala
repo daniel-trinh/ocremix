@@ -13,8 +13,8 @@ trait ProjectSettings {
 }
 
 case object TwitterSettings extends ProjectSettings {
-  val source = Source.fromURL(getClass.getResource("/defaultTwitterConfiguration.json"))
-  val twitterConfiguration = Agent(parse[TwitterConfiguration](source))(MySystem())
+  val defaultConfiguration = Source.fromURL(getClass.getResource("/defaultTwitterConfiguration.json"))
+  val configuration = Agent(parse[TwitterConfiguration](defaultConfiguration))(MySystem())
 
   // TODO: figure out less verbose way of loading values from conf..
   // probably use a .json file with jerkson instead.

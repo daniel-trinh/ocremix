@@ -20,7 +20,7 @@ trait Tweetable {
    *
    * @return The contents of the twitterConfiguration Agent.
    */
-  def twitterConfig: TwitterConfiguration = TwitterSettings.twitterConfiguration()
+  def twitterConfig: TwitterConfiguration = TwitterSettings.configuration()
 
   /**
    * The underscore casing is due to how Jerkson requires constructor attributes
@@ -149,4 +149,6 @@ class TwitterClient(someOauth: Auth) extends Tweetable {
     }.right.map { jsString => parse[TwitterConfiguration](jsString) }
   }
 
+  case class Tweet(message: String) {
+  }
 }
