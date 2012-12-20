@@ -27,11 +27,11 @@ class ApiClient(someOauth: Auth) {
       sign (twitterOauth.consumer, twitterOauth.accessKey)
       OK as.String
     ).either.left.map { error =>
-      s"""
-      Error sending direct message to $user.screenName.
-      Failed message contents: $error.getMessage
-      Error message: %s
-      """.stripMargin
+      """
+      |Error sending direct message to %s.screenName.
+      |Failed message contents: %s
+      |Error message: %s.getMessage
+      """.format(user, message, error).stripMargin
     }
   }
 
@@ -45,11 +45,11 @@ class ApiClient(someOauth: Auth) {
       sign (twitterOauth.consumer, twitterOauth.accessKey)
       OK as.String
     ).either.left.map { error =>
-      s"""
-      Error posting tweet.
-      Failed tweet message: $tweet
-      Error message: $error.getMessage
-      """.stripMargin
+      """
+      |Error posting tweet.
+      |Failed tweet message: %s
+      |Error message: %s.getMessage
+      """.format(tweet, error).stripMargin
     }
   }
 
@@ -60,10 +60,10 @@ class ApiClient(someOauth: Auth) {
       sign (twitterOauth.consumer, twitterOauth.accessKey)
       OK as.String
     ).either.left.map { error =>
-      s"""
-      Error retrieving configuration.
-      Error message: $error.getMessage
-      """.stripMargin
+      """
+      |Error retrieving configuration.
+      |Error message: %s.getMessage
+      """.format(error).stripMargin
     }.right.map { jsString => parse[TwitterConfiguration](jsString) }
   }
 }
@@ -73,8 +73,8 @@ case class Tweet(message: String) {
   require(Tweet.tweetable(message) == true,
     """
       |Message is too long to tweet (t.co shortening has been accounted for).
-      |Message: $message
-    """.stripMargin)
+      |Message: %s
+    """.format(message).stripMargin)
   val content = message
 }
 
@@ -136,7 +136,7 @@ case object Tweet {
    * @return True if tweetable, false if not
    */
   def tweetable(message: String, maxLimit: Int = charLimit): Boolean = {
-    require(maxLimit >= 1, s"maxLimit must be non negative and not empty: $message")
+    require(maxLimit >= 1, "maxLimit must be non negative and not empty: %s".format(message))
 
     if (message.length() <= maxLimit)
       true

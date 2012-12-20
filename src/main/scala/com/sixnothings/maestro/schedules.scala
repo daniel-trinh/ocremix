@@ -17,7 +17,7 @@ class HelloActor extends Actor {
  * Used to update the TwitterSettings.configuration Agent.
  */
 class UpdateTwitterConfigActor extends Actor {
-  def receive = ???
+  def receive = throw new NotImplementedError 
 }
 
 /**
@@ -25,14 +25,14 @@ class UpdateTwitterConfigActor extends Actor {
  * in case something goes terribly wrong.
  */
 class SendDirectMessageActor extends Actor {
-  def receive = ???
+  def receive = throw new NotImplementedError 
 }
 
 /**
  * Used to Tweet messages to Twitter.
  */
 class TweeterActor extends Actor {
-  def receive = ???
+  def receive = throw new NotImplementedError 
 }
 
 /**
@@ -40,7 +40,7 @@ class TweeterActor extends Actor {
  * to TweeterActor for tweeting.
  */
 class OCRemixRSSParserActor extends Actor {
-  def receive = ???
+  def receive = throw new NotImplementedError 
 }
 
 case object MySystem {
