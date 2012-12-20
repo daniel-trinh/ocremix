@@ -1,7 +1,7 @@
 package com.sixnothings.maestro
 
 import akka.actor.{ Actor, ActorSystem, Props }
-import scala.concurrent.duration._
+import akka.util.duration._
 
 /**
  * Dummy actor used for testing to make sure Akka is set up properly
@@ -17,7 +17,9 @@ class HelloActor extends Actor {
  * Used to update the TwitterSettings.configuration Agent.
  */
 class UpdateTwitterConfigActor extends Actor {
-  def receive = throw new NotImplementedError 
+  def receive = {
+    case _ => "yep"
+  }
 }
 
 /**
@@ -25,14 +27,18 @@ class UpdateTwitterConfigActor extends Actor {
  * in case something goes terribly wrong.
  */
 class SendDirectMessageActor extends Actor {
-  def receive = throw new NotImplementedError 
+  def receive = {
+    case _ => "yep"
+  }
 }
 
 /**
  * Used to Tweet messages to Twitter.
  */
 class TweeterActor extends Actor {
-  def receive = throw new NotImplementedError 
+  def receive = {
+    case _ => "yep"
+  }
 }
 
 /**
@@ -40,7 +46,9 @@ class TweeterActor extends Actor {
  * to TweeterActor for tweeting.
  */
 class OCRemixRSSParserActor extends Actor {
-  def receive = throw new NotImplementedError 
+  def receive = {
+    case _ => "yep"
+  }
 }
 
 case object MySystem {
@@ -51,12 +59,11 @@ case object MySystem {
 object Main extends App {
   val message = "Hello"
   val system = MySystem()
-  import system.dispatcher
   val helloActor = system.actorOf(Props[HelloActor], name = "helloactor")
 
   val cancellable = system.scheduler.schedule(
     initialDelay = 1 milliseconds,
-    interval     = 1 second,
+    frequency    = 1 second,
     receiver     = helloActor,
     message      = "test"
   )

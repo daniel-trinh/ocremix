@@ -16,7 +16,8 @@ libraryDependencies ++= Seq(
   "com.codahale" % "jerkson_2.9.1" % "0.5.0",
   "net.databinder.dispatch" %% "dispatch-core" % "0.9.4",
   "com.typesafe" % "config" % "1.0.0",
-  "com.typesafe.akka" % "akka-actor" % "2.0.4"
+  "com.typesafe.akka" % "akka-actor" % "2.0.4",
+  "com.typesafe.akka" % "akka-agent" % "2.0.4"
 )
 
 //jerkson is broken with 2.10...
@@ -24,7 +25,6 @@ libraryDependencies ++= Seq(
 //
 //libraryDependencies ++= Seq(
 //  "org.scalatest" % "scalatest_2.10.0-RC5" % "1.8-B1",
-//  //"org.scalatest" % "scalatest_2.10.0-RC5" % "2.0.M5-B1",
 //  "com.codahale" % "jerkson_2.9.1" % "0.5.0",
 //  "net.databinder.dispatch" %% "dispatch-core" % "0.9.4",
 //  "com.typesafe" % "config" % "1.0.0",

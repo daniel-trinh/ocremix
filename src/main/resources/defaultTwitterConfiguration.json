@@ -3,10 +3,10 @@
   "max_media_per_upload": 1,
   "non_username_paths": [
     "about",
-    "accoun",
-    "accounts,
-    "activity"
-    "all"
+    "account",
+    "accounts",
+    "activity",
+    "all",
     "annoncements",
     "anywhere",
     "api_rules",

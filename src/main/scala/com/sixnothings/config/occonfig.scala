@@ -17,7 +17,8 @@ case object TwitterSettings extends ProjectSettings {
   val configuration = Agent(parse[TwitterConfiguration](defaultConfiguration))(MySystem())
 
   // TODO: figure out less verbose way of loading values from conf..
-  // probably use a .json file with jerkson instead.
+  // probably use a .json file and parse it into a case class using a magic json parser --
+  // that way I won't need to write a silly spec to make sure these config values are non nil.
   val twitterConf = base.getConfig("twitter")
   val handlesConf = twitterConf.getConfig("handles")
   val twitterUrlsConf = twitterConf.getConfig("urls")

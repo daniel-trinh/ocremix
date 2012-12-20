@@ -1,16 +1,22 @@
 import com.sixnothings.twitter.api.Tweet
 import java.lang.IllegalArgumentException
-import org.scalatest.FunSpec
-import org.scalatest.BeforeAndAfter
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{PrivateMethodTester, FunSpec, BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.matchers.ShouldMatchers
 
-class TweetSpec extends FunSpec with BeforeAndAfter with ShouldMatchers {
+class TweetSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with PrivateMethodTester {
 
   val shortMessage = "hello 123"
   val longMessage  = "0123456789" * 14 + "1"
 
+  val shortUrl = "www.10.com"
+  val shortHttpsUrl = "https://short.com"
+  val shortHttpUrl = "http://short.com"
+
   val thirtyCharUrl = "www.30length.com/yep/123456789"
+  val longHttpsUrl = "https://www.this-url-is-definitely-longer-than-21.com/"
+  val longHttpUrl = "http://www.this-url-is-definitely-longer-than-20.com/"
+
+
   val tenChars = "0123456789"
 
   val shortMessageWithUrl         = "this link is pretty cool: http://www.twitter.com"
@@ -58,6 +64,41 @@ class TweetSpec extends FunSpec with BeforeAndAfter with ShouldMatchers {
         intercept[IllegalArgumentException](Tweet.tweetable("nope", 0))
         intercept[IllegalArgumentException](Tweet.tweetable("nope", -1))
       }
+    }
+  }
+  describe("tcoShortenedUrlLength") {
+    val tcoShortenedUrlLength = PrivateMethod[Int]('tcoShortenedUrlLength)
+
+    // TODO: this code looks like it can be shortened
+    describe("urls longer than tco shortened url limit") {
+      it("no protocol url") {
+        Tweet invokePrivate tcoShortenedUrlLength(thirtyCharUrl) should be === 20
+      }
+      it("https url") {
+        Tweet invokePrivate tcoShortenedUrlLength(longHttpsUrl) should be === 21
+      }
+      it("http url") {
+        Tweet invokePrivate tcoShortenedUrlLength(longHttpUrl) should be === 20
+      }
+    }
+
+    describe("urls shorter than tco shortened url limit") {
+      it("no protocol url") {
+        Tweet invokePrivate tcoShortenedUrlLength(shortUrl) should be === shortUrl.length
+      }
+      it("https url") {
+        Tweet invokePrivate tcoShortenedUrlLength(shortHttpsUrl) should be === shortHttpsUrl.length
+      }
+      it("http url") {
+        Tweet invokePrivate tcoShortenedUrlLength(shortHttpUrl) should be === shortHttpUrl.length
+      }
+    }
+  }
+
+  describe("savedChars") {
+    val savedChars = PrivateMethod[Int]('savedChars)
+    it("saved chars of a long URL as a message should be url.length - shortUrlLength") {
+      Tweet invokePrivate savedChars(longHttpUrl) should be === (longHttpUrl.length - Tweet.shortUrlLength)
     }
   }
 }

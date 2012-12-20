@@ -10,9 +10,9 @@ import com.sixnothings.twitter.json._
 class ApiClient(someOauth: Auth) {
   val twitterOauth = someOauth
 
-  def sendError(error: String) = ???
+  def sendError(error: String) = "yep"
 
-  def asyncSendError = ???
+  def asyncSendError = "yep"
 
   def api = url(TwitterSettings.twitterUrls("api"))
 
@@ -138,10 +138,12 @@ case object Tweet {
   def tweetable(message: String, maxLimit: Int = charLimit): Boolean = {
     require(maxLimit >= 1, "maxLimit must be non negative and not empty: %s".format(message))
 
-    if (message.length() <= maxLimit)
+    val messageLength = message.length()
+
+    if (messageLength <= maxLimit)
       true
     else {
-      savedChars(message)
+      if (messageLength - savedChars(message) <= 140) true else false
     }
 
     message.length() match {
@@ -151,7 +153,6 @@ case object Tweet {
       case length if length < 140 => true
     }
   }
-
 
   /**
    * Returns the number of characters a particular URL will count for within a tweet
@@ -165,7 +166,7 @@ case object Tweet {
    * @return The length of the URL after any possible t.co url shortening has occurred.
    */
   private def tcoShortenedUrlLength(url: String): Int = {
-    val maxUrlLength = if (url startsWith "https") shortUrlLength else shortUrlLengthHttps
+    val maxUrlLength = if (url startsWith "https://") shortUrlLengthHttps else shortUrlLength
     val urlLength = url.length
 
     if (urlLength <= maxUrlLength) urlLength else maxUrlLength
@@ -179,6 +180,7 @@ case object Tweet {
    * @return The number of characters saved from t.co shortening, if any (default 0)
    */
   private def savedChars(message: String): Int = {
+
     val beforeAndAfterUrlLengths = urlRegex.findAllIn(message).foldLeft((0, 0)) {
       case ((origUrlLengths, shortenedUrlLengths), url) => {
         (origUrlLengths + url.length, shortUrlLength + tcoShortenedUrlLength(url))
