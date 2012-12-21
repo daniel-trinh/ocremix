@@ -2,6 +2,7 @@ package com.sixnothings.maestro
 
 import akka.actor.{ Actor, ActorSystem, Props }
 import akka.util.duration._
+import com.sixnothings.twitter.api.{ApiClient, Tweet}
 
 /**
  * Dummy actor used for testing to make sure Akka is set up properly
@@ -35,9 +36,14 @@ class SendDirectMessageActor extends Actor {
 /**
  * Used to Tweet messages to Twitter.
  */
-class TweeterActor extends Actor {
+class TweeterActor(client: ApiClient) extends Actor {
   def receive = {
-    case _ => "yep"
+    case message: String =>
+    case tweet @ Tweet(message) => {
+      client.statusesUpdate(tweet).onFailure()
+
+    }
+    case _ =>
   }
 }
 
@@ -51,6 +57,17 @@ class OCRemixRSSParserActor extends Actor {
   }
 }
 
+class OCRemixRssPollerActor extends Actor {
+  def receive = {
+    case "doit" => {
+
+    }
+    case _ => {
+      "???"
+    }
+  }
+}
+
 case object MySystem {
   val system = ActorSystem("Scheduler")
   def apply() = system
@@ -59,12 +76,22 @@ case object MySystem {
 object Main extends App {
   val message = "Hello"
   val system = MySystem()
-  val helloActor = system.actorOf(Props[HelloActor], name = "helloactor")
 
-  val cancellable = system.scheduler.schedule(
-    initialDelay = 1 milliseconds,
-    frequency    = 1 second,
-    receiver     = helloActor,
-    message      = "test"
+  val configUpdater = system.actorOf(Props[UpdateTwitterConfigActor], name = "configUpdater")
+  val rssPollerActor = system.actorOf(Props[OCRemixRssPollerActor], name = "rssPoller")
+
+
+  val twitterConfigUpdateSchedule = system.scheduler.schedule(
+    initialDelay = 0 seconds,
+    frequency    = 1 day,
+    receiver     = configUpdater,
+    message      = "doit"
+  )
+
+  val rssPollerSchedule = system.scheduler.schedule(
+    initialDelay = 0 seconds,
+    frequency    = 30 minutes,
+    receiver     = rssPollerActor,
+    message      = "doit"
   )
 }

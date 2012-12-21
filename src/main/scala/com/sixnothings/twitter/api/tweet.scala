@@ -1,73 +1,7 @@
 package com.sixnothings.twitter.api
 
-import dispatch._
-import dispatch.oauth._
-import com.codahale.jerkson.Json._
-import java.net.URLEncoder
-import com.sixnothings.config._
-import com.sixnothings.twitter.json._
-
-class ApiClient(someOauth: Auth) {
-  val twitterOauth = someOauth
-
-  def sendError(error: String) = "yep"
-
-  def asyncSendError = "yep"
-
-  def api = url(TwitterSettings.twitterUrls("api"))
-
-  def directMessage(user: TwitterHandle, message: String): Promise[Either[String,String]] = {
-    Http(
-      api / "direct_messages" / "new.json"
-      << Map(
-        "user_id"     -> user.id,
-        "screen_name" -> user.screenName,
-        "text"        -> message
-      )
-      sign (twitterOauth.consumer, twitterOauth.accessKey)
-      OK as.String
-    ).either.left.map { error =>
-      """
-      |Error sending direct message to %s.screenName.
-      |Failed message contents: %s
-      |Error message: %s.getMessage
-      """.format(user, message, error).stripMargin
-    }
-  }
-
-  def statusesUpdate(tweet: Tweet): Promise[Either[String,String]] = {
-    Http(
-      api / "statuses" / "update.json"
-      << Map (
-        "status"    -> tweet.content,
-        "trim_user" -> "t"
-      )
-      sign (twitterOauth.consumer, twitterOauth.accessKey)
-      OK as.String
-    ).either.left.map { error =>
-      """
-      |Error posting tweet.
-      |Failed tweet message: %s
-      |Error message: %s.getMessage
-      """.format(tweet, error).stripMargin
-    }
-  }
-
-  // this is pretty much just used to test that talking to twitter's API works
-  def helpConfiguration: Promise[Either[String, TwitterConfiguration]] = {
-    Http(
-      api / "help" / "configuration.json"
-      sign (twitterOauth.consumer, twitterOauth.accessKey)
-      OK as.String
-    ).either.left.map { error =>
-      """
-      |Error retrieving configuration.
-      |Error message: %s.getMessage
-      """.format(error).stripMargin
-    }.right.map { jsString => parse[TwitterConfiguration](jsString) }
-  }
-}
-
+import com.sixnothings.config.TwitterSettings
+import com.sixnothings.twitter.json.TwitterConfiguration
 
 case class Tweet(message: String) {
   require(Tweet.tweetable(message) == true,
@@ -100,7 +34,7 @@ case object Tweet {
   def shortUrlLengthHttps: Int = twitterConfig.short_url_length_https
 
   /**
-   * Will trim a message if it will be longer than the Tweet character limit.
+   * Trims a message if it will be longer than the Tweet character limit, otherwise does nothing.
    *
    * Will simply trim characters from the end of the tweet, plus 2 extra for appending "..",
    * until it is equal to or less than the character limit.
@@ -115,14 +49,12 @@ case object Tweet {
    *                 to override.
    * @return Trimmed message.
    */
-  def trimMessage(message: String, maxLimit: Int = charLimit): String = {
+  def trim(message: String, maxLimit: Int = charLimit): String = {
     require(maxLimit >= 0, "maxLimit must be non negative")
-
-    message.length() match {
-      case length if length > maxLimit => { }
-      case length if length < 3 => { }
-    }
-    message.substring(0, message.length())
+    if (message.length() > maxLimit)
+      message.substring(0, maxLimit-2) + ".."
+    else
+      message
   }
 
   /**
@@ -130,27 +62,30 @@ case object Tweet {
    *
    * Figures out if the message's final length (after t.co shortening) can be tweeted.
    *
+   * WARNING: this does not necessarily reflect with 100% accuracy if the message is
+   * tweetable or not. Since this method uses a regex on the entire method to find URL
+   * matches, there are likely a few corner cases that Twitter's API might figure out
+   * there are multiple URLs, but the regex does not (or vice versa) -- for example, the
+   * regex used by this method will not detect multiple urls in this string:
+   * "www.twitter.comwww.twitter.comwww.twitter.com".
+   *
+   * Format your messages in a sane manner (separate your URLs by spaces).
+   *
    * @param message The message to check for tweetability.
    * @param maxLimit Loaded from TwitterSettings.charLimit by default -- pass this param
    *                 to override.
    * @return True if tweetable, false if not
    */
   def tweetable(message: String, maxLimit: Int = charLimit): Boolean = {
-    require(maxLimit >= 1, "maxLimit must be non negative and not empty: %s".format(message))
+    require(maxLimit >= 1, "maxLimit must be greater than one: %s".format(maxLimit))
+    require(message.length() >= 1, "message length can't be an empty string.")
 
     val messageLength = message.length()
 
     if (messageLength <= maxLimit)
       true
     else {
-      if (messageLength - savedChars(message) <= 140) true else false
-    }
-
-    message.length() match {
-      case length if length > maxLimit => {
-        false
-      }
-      case length if length < 140 => true
+      messageLength - savedChars(message) <= 140
     }
   }
 
@@ -180,10 +115,9 @@ case object Tweet {
    * @return The number of characters saved from t.co shortening, if any (default 0)
    */
   private def savedChars(message: String): Int = {
-
     val beforeAndAfterUrlLengths = urlRegex.findAllIn(message).foldLeft((0, 0)) {
       case ((origUrlLengths, shortenedUrlLengths), url) => {
-        (origUrlLengths + url.length, shortUrlLength + tcoShortenedUrlLength(url))
+        (origUrlLengths + url.length, shortenedUrlLengths + tcoShortenedUrlLength(url))
       }
     }
     beforeAndAfterUrlLengths._1 - beforeAndAfterUrlLengths._2

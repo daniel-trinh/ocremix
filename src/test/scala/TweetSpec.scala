@@ -8,30 +8,30 @@ class TweetSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with Pri
   val shortMessage = "hello 123"
   val longMessage  = "0123456789" * 14 + "1"
 
-  val shortUrl = "www.10.com"
+  val shortUrl      = "www.10.com"
   val shortHttpsUrl = "https://short.com"
-  val shortHttpUrl = "http://short.com"
+  val shortHttpUrl  = "http://short.com"
 
-  val thirtyCharUrl = "www.30length.com/yep/123456789"
-  val longHttpsUrl = "https://www.this-url-is-definitely-longer-than-21.com/"
-  val longHttpUrl = "http://www.this-url-is-definitely-longer-than-20.com/"
-
+  val twentyNineCharUrl = "www.29length.com/yep/12345678"
+  val longHttpsUrl      = "https://www.this-url-is-definitely-longer-than-21.com/"
+  val longHttpUrl       = "http://www.this-url-is-definitely-longer-than-20.com/"
 
   val tenChars = "0123456789"
 
   val shortMessageWithUrl         = "this link is pretty cool: http://www.twitter.com"
-  val longMessageWithUrl          = tenChars * 12 + "http://www.twitter.com/api1.1/help/configuration.json"
-  val longMessageWithUrlHttps     = tenChars * 11 + "123456789" + "http://www.twitter.com/api1.1/help/configuration.json"
-  val longMessageWithMultipleUrls = thirtyCharUrl * 7
+  val longMessageWithUrl          = tenChars * 12 +
+    "http://www.twitter.com/api1.1/help/configuration.json"
+  val longMessageWithUrlHttps     = tenChars * 11 + "123456789" +
+    "http://www.twitter.com/api1.1/help/configuration.json"
+  val longMessageWithMultipleUrls = (twentyNineCharUrl + " ") * 6
 
-  describe("trimMessage") {
+  describe("trim") {
     it("should return itself if length less than 140") {
+      Tweet.trim(shortUrl) should be === shortUrl
     }
-    it("should trim a message with one http url") {
-    }
-    it("should trim a message with one https url") {
-    }
-    it("should trim an ocremix rss style message") {
+    it("should trim a long message") {
+      Tweet.trim(longMessageWithMultipleUrls) should be === longMessageWithMultipleUrls.
+        substring(0, Tweet.charLimit-2) + ".."
     }
   }
   describe("tweetable") {
@@ -56,7 +56,6 @@ class TweetSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with Pri
       it("should be false for a message over 140 characters") {
         Tweet.tweetable(longMessage) should be === false
       }
-
       it("should raise an exception for a 0 length string") {
         intercept[IllegalArgumentException](Tweet tweetable "")
       }
@@ -72,7 +71,7 @@ class TweetSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with Pri
     // TODO: this code looks like it can be shortened
     describe("urls longer than tco shortened url limit") {
       it("no protocol url") {
-        Tweet invokePrivate tcoShortenedUrlLength(thirtyCharUrl) should be === 20
+        Tweet invokePrivate tcoShortenedUrlLength(twentyNineCharUrl) should be === 20
       }
       it("https url") {
         Tweet invokePrivate tcoShortenedUrlLength(longHttpsUrl) should be === 21
@@ -99,6 +98,9 @@ class TweetSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with Pri
     val savedChars = PrivateMethod[Int]('savedChars)
     it("saved chars of a long URL as a message should be url.length - shortUrlLength") {
       Tweet invokePrivate savedChars(longHttpUrl) should be === (longHttpUrl.length - Tweet.shortUrlLength)
+    }
+    it("saved chars of a multi url message, urls separated by spaces") {
+      Tweet invokePrivate savedChars(longMessageWithMultipleUrls) should be === 29 * 6 - 20 * 6
     }
   }
 }
