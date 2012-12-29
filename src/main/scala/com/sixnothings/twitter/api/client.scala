@@ -28,10 +28,10 @@ class ApiClient(someOauth: Auth) {
       OK as.String
     ).either.left.map { error =>
       """
-      |Error sending direct message to %s.screenName.
+      |Error sending direct message to %s.
       |Failed message contents: %s
-      |Error message: %s.getMessage
-      """.format(user, message, error).stripMargin
+      |Error message: %s
+      """.format(user.screenName, message, error.getMessage).stripMargin
     }
   }
 
@@ -48,8 +48,8 @@ class ApiClient(someOauth: Auth) {
       """
       |Error posting tweet.
       |Failed tweet message: %s
-      |Error message: %s.getMessage
-      """.format(tweet, error).stripMargin
+      |Error message: %s
+      """.format(tweet, error.getMessage).stripMargin
     }
   }
 
@@ -62,8 +62,8 @@ class ApiClient(someOauth: Auth) {
     ).either.left.map { error =>
       """
       |Error retrieving configuration.
-      |Error message: %s.getMessage
-      """.format(error).stripMargin
+      |Error message: %s
+      """.format(error.getMessage).stripMargin
     }.right.map { jsString => parse[TwitterConfiguration](jsString) }
   }
 }
