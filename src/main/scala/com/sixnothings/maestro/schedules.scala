@@ -27,11 +27,11 @@ class HelloActor extends LoggedActor {
 /**
  * Used to update the TwitterSettings.configuration Agent.
  */
-class UpdateTwitterConfigActor extends LoggedActor {
+class UpdateTwitterConfigActor(client: ApiClient) extends LoggedActor {
   def receive = {
-    case apiClient: ApiClient => apiClient.helpConfiguration.onSuccess {
+    case "doit" => client.helpConfiguration.onSuccess {
       // onSuccess handles both success and failure, because
-      // apiClient methods are designed to never throw an exception (by using
+      // client methods are designed to never throw an exception (by using
       // Either).
       case response => response match {
         case Right(config) => {
@@ -39,7 +39,7 @@ class UpdateTwitterConfigActor extends LoggedActor {
           log.info("Config updated: %s".format(config.toString))
         }
         case Left(error) => {
-          Actors.directMessageActor ! (apiClient, TwitterSettings.panicHandle, error)
+          Actors.directMessager ! (client, TwitterSettings.panicHandle, error)
           log.error(error)
         }
       }
@@ -52,13 +52,13 @@ class UpdateTwitterConfigActor extends LoggedActor {
  * Used primarily for sending error alerts to a panic twitter handle,
  * in case something goes terribly wrong.
  */
-class SendDirectMessageActor extends LoggedActor {
+class SendDirectMessageActor(client: ApiClient) extends LoggedActor {
   // onSuccess handles both success and failure, because
-  // apiClient methods are designed to never throw an exception (by using
+  // client methods are designed to never throw an exception (by using
   // Either).
   def receive = {
-    case (apiClient: ApiClient, handle: TwitterHandle, message: String) => {
-      apiClient.directMessage(handle, message).onSuccess {
+    case (handle: TwitterHandle, message: String) => {
+      client.directMessage(handle, message).onSuccess {
         case Right(response) => log.info(response)
         case Left(error) => log.error(error)
       }
@@ -69,17 +69,16 @@ class SendDirectMessageActor extends LoggedActor {
 /**
  * Used to Tweet messages to Twitter.
  */
-class TweeterActor extends LoggedActor {
+class TweeterActor(client: ApiClient) extends LoggedActor {
   def receive = {
-    case (apiClient: ApiClient, tweet @ Tweet(message)) => {
+    case tweet @ Tweet(message) => {
       // onSuccess handles both success and failure, because
-      // apiClient methods are designed to never throw an exception (by using
+      // client methods are designed to never throw an exception (by using
       // Either).
-      apiClient.statusesUpdate(tweet).onSuccess {
+      client.statusesUpdate(tweet).onSuccess {
         case Right(response) => log.info(response)
         case Left(error) =>
-          Actors.directMessageActor ! (apiClient, TwitterSettings.panicHandle, error)
-
+          Actors.directMessager ! (client, TwitterSettings.panicHandle, error)
       }
     }
   }
@@ -91,10 +90,21 @@ class TweeterActor extends LoggedActor {
  */
 class OCRemixRSSParserActor extends LoggedActor {
   // onSuccess handles both success and failure, because
-  // apiClient methods are designed to never throw an exception (by using
+  // client methods are designed to never throw an exception (by using
   // Either).
   def receive = {
     case _ => "yep"
+  }
+}
+
+class OCRemixRssPollerActor extends Actor {
+  def receive = {
+    case "doit" => {
+
+    }
+    case _ => {
+      "???"
+    }
   }
 }
 
@@ -106,22 +116,31 @@ case object MySystem {
 case object Actors {
   val client = new ApiClient(new Auth(""))
   val system = MySystem()
-  val helloActor = system.actorOf(Props[HelloActor], name = "helloActor")
-  val configActor = system.actorOf(Props[UpdateTwitterConfigActor], name = "configActor")
-  val directMessageActor = system.actorOf(Props[SendDirectMessageActor], name = "directMessageActor")
+  val rssPoller      = system.actorOf(Props[OCRemixRssPollerActor], name = "rssPoller")
+  val helloActor     = system.actorOf(Props[HelloActor], name = "helloActor")
+  val configUpdater  = system.actorOf(Props(new UpdateTwitterConfigActor(client)), name = "configActor")
+  val directMessager = system.actorOf(Props(new SendDirectMessageActor(client)), name = "directMessageActor")
+  val tweeter        = system.actorOf(Props(new TweeterActor(client)), name = "tweeter")
 }
 
 object Main extends App {
-  val cancellable = Actors.system.scheduler.schedule(
+  val helloWorld = Actors.system.scheduler.schedule(
     initialDelay = 1 milliseconds,
     frequency    = 1 hour,
     receiver     = Actors.helloActor,
-    message      = "test"
+    message      = "test")
+
+  val twitterConfigUpdaterSchedule = Actors.system.scheduler.schedule(
+    initialDelay = 0 seconds,
+    frequency    = 1 day,
+    receiver     = Actors.configUpdater,
+    message      = "doit"
   )
-//  val cancellable2 = Actors.system.scheduler.schedule(
-//    initialDelay = 1 milliseconds,
-//    frequency    = 1 hour,
-//    receiver     = Actors.configActor,
-//    message      = Actors.client
-//  )
+
+  val rssPollerSchedule = Actors.system.scheduler.schedule(
+    initialDelay = 0 seconds,
+    frequency    = 30 minutes,
+    receiver     = Actors.rssPoller,
+    message      = "doit"
+  )
 }
