@@ -3,7 +3,7 @@ package com.sixnothings.twitter.api
 import dispatch._
 import dispatch.oauth._
 import com.codahale.jerkson.Json._
-import java.net.URLEncoder
+import java.net.URLDecoder
 import com.sixnothings.config._
 import com.sixnothings.twitter.json._
 
@@ -35,7 +35,7 @@ class ApiClient(someOauth: Auth) {
     }
   }
 
-  def statusesUpdate(tweet: Tweet): Promise[Either[String,String]] = {
+  def statusesUpdate(tweet: Tweetable): Promise[Either[String,String]] = {
     Http(
       api / "statuses" / "update.json"
       << Map (
@@ -50,6 +50,30 @@ class ApiClient(someOauth: Auth) {
       |Failed tweet message: %s
       |Error message: %s
       """.format(tweet, error.getMessage).stripMargin
+    }
+  }
+
+  def userTimeline(
+    userId: String,
+    screenName: String,
+    count: Int): Promise[Either[String,String]] = {
+    Http(
+      api / "statuses" / "user_timeline.json"
+      << Map (
+        "user_id" -> userId,
+        "screen_name" -> screenName,
+        "trim_user" -> "t",
+        "count" -> count.toString
+      )
+      sign (twitterOauth.consumer, twitterOauth.accessKey)
+      OK as.String
+    ).either.left.map { error =>
+      """
+        |Error retrieving timeline.
+        |userId: %d
+        |screenName: %s
+        |count: %d
+      """.stripMargin.format(userId, screenName, count)
     }
   }
 

@@ -2,10 +2,12 @@ package com.sixnothings.maestro
 
 import akka.actor.{ Actor, ActorSystem, Props }
 import akka.util.duration._
-import com.sixnothings.twitter.api.{Tweet, Auth, ApiClient}
+import com.sixnothings.twitter.api.{Tweetable, Auth, ApiClient}
 import com.sixnothings.config.{TwitterHandle, TwitterSettings}
 import akka.event.Logging
-
+import com.sixnothings.ocremix.RSS
+import com.codahale.jerkson.Json._
+import com.sixnothings.twitter.json.{Tweet}
 
 /**
  * Used to enable actor logging in actor classes that inherit from this.
@@ -20,7 +22,7 @@ abstract class LoggedActor extends Actor {
 class HelloActor extends LoggedActor {
   def receive = {
     case "hello" => log.info("hello back at you")
-    case _       => log.error("huh?")
+    case msg     => log.info(msg.toString)
   }
 }
 
@@ -39,7 +41,7 @@ class UpdateTwitterConfigActor(client: ApiClient) extends LoggedActor {
           log.info("Config updated: %s".format(config.toString))
         }
         case Left(error) => {
-          Actors.directMessager ! (client, TwitterSettings.panicHandle, error)
+          Actors.directMessager ! (error)
           log.error(error)
         }
       }
@@ -52,33 +54,37 @@ class UpdateTwitterConfigActor(client: ApiClient) extends LoggedActor {
  * Used primarily for sending error alerts to a panic twitter handle,
  * in case something goes terribly wrong.
  */
-class SendDirectMessageActor(client: ApiClient) extends LoggedActor {
+class SendDirectMessageActor(
+  client: ApiClient,
+  handle: TwitterHandle = TwitterSettings.panicHandle) extends LoggedActor {
   // onSuccess handles both success and failure, because
   // client methods are designed to never throw an exception (by using
   // Either).
   def receive = {
-    case (handle: TwitterHandle, message: String) => {
-      client.directMessage(handle, message).onSuccess {
-        case Right(response) => log.info(response)
-        case Left(error) => log.error(error)
-      }
+    case (message: String) => {
+      log.error(message)
+//      client.directMessage(handle, message).onSuccess {
+//        case Right(response) => log.info(response)
+//        case Left(error) => log.error(error)
+//      }
     }
   }
 }
 
 /**
- * Used to Tweet messages to Twitter.
+ * Used to Tweetable messages to Twitter.
  */
 class TweeterActor(client: ApiClient) extends LoggedActor {
   def receive = {
-    case tweet @ Tweet(message) => {
+    case tweet @ Tweetable(message) => {
       // onSuccess handles both success and failure, because
       // client methods are designed to never throw an exception (by using
       // Either).
       client.statusesUpdate(tweet).onSuccess {
         case Right(response) => log.info(response)
         case Left(error) =>
-          Actors.directMessager ! (client, TwitterSettings.panicHandle, error)
+          Actors.directMessager ! (error)
+          log.error(error)
       }
     }
   }
@@ -86,21 +92,39 @@ class TweeterActor(client: ApiClient) extends LoggedActor {
 
 /**
  * Parses OCRemix RSS XML into a tweetable format, and then sends a message
- * to TweeterActor for tweeting.
+ * to TweeterActor for tweeting
  */
-class OCRemixRSSParserActor extends LoggedActor {
-  // onSuccess handles both success and failure, because
-  // client methods are designed to never throw an exception (by using
-  // Either).
-  def receive = {
-    case _ => "yep"
-  }
-}
-
-class OCRemixRssPollerActor extends Actor {
+class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
   def receive = {
     case "doit" => {
-
+      RSS.fetch.onSuccess {
+        case Right(rssResponse) => {
+          val remixes = RSS.extractRemixes(rssResponse)
+          // TODO: extract this block of code into a function somewhere else
+          val idRegex = """^(\d+):""".r
+          client.userTimeline(
+            userId = TwitterSettings.ocremixHandle.id,
+            screenName = TwitterSettings.ocremixHandle.screenName,
+            count = 10
+          ).onSuccess {
+            case Right(jsonResponse) => {
+              val latestRemixTweet = parse[List[Tweet]](jsonResponse).head
+              val idRegex(latestRemixTweetId) = latestRemixTweet
+              remixes.takeWhile { remix =>
+                remix.songId >= latestRemixTweetId.toInt
+              }.foreach { untweetedRemix =>
+                log.info(untweetedRemix.toTweetable.toString)
+                //Actors.tweeter ! untweetedRemix.toTweetable
+              }
+            }
+            case Left(error) => {
+              Actors.directMessager ! error
+            }
+          }
+        }
+        case Left(error) =>
+          Actors.directMessager ! (error)
+      }
     }
     case _ => {
       "???"

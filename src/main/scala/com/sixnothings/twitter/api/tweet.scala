@@ -3,8 +3,8 @@ package com.sixnothings.twitter.api
 import com.sixnothings.config.TwitterSettings
 import com.sixnothings.twitter.json.TwitterConfiguration
 
-case class Tweet(message: String) {
-  require(Tweet.tweetable(message) == true,
+case class Tweetable(message: String) {
+  require(Tweetable.isTweetable(message) == true,
     """
       |Message is too long to tweet (t.co shortening has been accounted for).
       |Message: %s
@@ -12,7 +12,7 @@ case class Tweet(message: String) {
   val content = message
 }
 
-case object Tweet {
+case object Tweetable {
   val charLimit = TwitterSettings.charLimit
 
   // this should match any valid http / ftp url, with or without the actual <protocol>:// string
@@ -34,7 +34,7 @@ case object Tweet {
   def shortUrlLengthHttps: Int = twitterConfig.short_url_length_https
 
   /**
-   * Trims a message if it will be longer than the Tweet character limit, otherwise does nothing.
+   * Trims a message if it will be longer than the Tweetable character limit, otherwise does nothing.
    *
    * Will simply trim characters from the end of the tweet, plus 2 extra for appending "..",
    * until it is equal to or less than the character limit.
@@ -76,7 +76,7 @@ case object Tweet {
    *                 to override.
    * @return True if tweetable, false if not
    */
-  def tweetable(message: String, maxLimit: Int = charLimit): Boolean = {
+  def isTweetable(message: String, maxLimit: Int = charLimit): Boolean = {
     require(maxLimit >= 1, "maxLimit must be greater than one: %s".format(maxLimit))
     require(message.length() >= 1, "message length can't be an empty string.")
 
@@ -88,6 +88,18 @@ case object Tweet {
       messageLength - savedChars(message) <= 140
     }
   }
+
+  /**
+   * Calculates the final expected number of characters of a message treated
+   * as a potential Tweetable.
+   * @param message
+   * @return message length after any potential t.co url shortening
+   */
+  def expectedMessageLength(message: String): Int =
+    message.length() - savedChars(message)
+
+  def numCharsOverflow(message: String): Int =
+    charLimit - expectedMessageLength(message)
 
   /**
    * Returns the number of characters a particular URL will count for within a tweet
