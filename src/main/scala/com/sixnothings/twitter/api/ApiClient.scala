@@ -59,7 +59,7 @@ class ApiClient(someOauth: Auth) {
     count: Int): Promise[Either[String,String]] = {
     Http(
       api / "statuses" / "user_timeline.json"
-      << Map (
+      <<? Map (
         "user_id" -> userId,
         "screen_name" -> screenName,
         "trim_user" -> "t",
