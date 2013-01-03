@@ -140,7 +140,7 @@ case object MySystem {
 case object Actors {
   val client = new ApiClient(new Auth(""))
   val system = MySystem()
-  val rssPoller      = system.actorOf(Props[OCRemixRssPollerActor], name = "rssPoller")
+  val rssPoller      = system.actorOf(Props(new OCRemixRssPollerActor(client)), name = "rssPoller")
   val helloActor     = system.actorOf(Props[HelloActor], name = "helloActor")
   val configUpdater  = system.actorOf(Props(new UpdateTwitterConfigActor(client)), name = "configActor")
   val directMessager = system.actorOf(Props(new SendDirectMessageActor(client)), name = "directMessageActor")
