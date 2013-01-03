@@ -26,12 +26,12 @@ case object TwitterSettings extends ProjectSettings {
   val charLimit = twitterConf.getInt("charLimit")
 
   val ocremixHandle = TwitterHandle(
-    "ocremix",
+    handlesConf.getConfig("ocremix").getString("name"),
     handlesConf.getConfig("ocremix").getString("id")
   )
 
   val panicHandle = TwitterHandle(
-    "panic",
+    handlesConf.getConfig("panic").getString("name"),
     handlesConf.getConfig("panic").getString("id")
   )
 
