@@ -108,8 +108,15 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
             count = 10
           ).onSuccess {
             case Right(jsonResponse) => {
-              val latestRemixTweet = parse[List[Tweet]](jsonResponse).head
-              val idRegex(latestRemixTweetId) = latestRemixTweet
+              val latestRemixTweets = parse[List[Tweet]](jsonResponse)
+
+              val latestRemixTweetId = latestRemixTweets match {
+                case Nil => "0"
+                case tweet :: _ => tweet match {
+                  case idRegex(id) => id
+                }
+              }
+
               remixes.takeWhile { remix =>
                 remix.songId >= latestRemixTweetId.toInt
               }.foreach { untweetedRemix =>
@@ -117,13 +124,10 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
                 //Actors.tweeter ! untweetedRemix.toTweetable
               }
             }
-            case Left(error) => {
-              Actors.directMessager ! error
-            }
+            case Left(error) => Actors.directMessager ! error
           }
         }
-        case Left(error) =>
-          Actors.directMessager ! (error)
+        case Left(error) => Actors.directMessager ! (error)
       }
     }
     case _ => {
@@ -140,8 +144,8 @@ case object MySystem {
 case object Actors {
   val client = new ApiClient(new Auth(""))
   val system = MySystem()
-  val rssPoller      = system.actorOf(Props(new OCRemixRssPollerActor(client)), name = "rssPoller")
   val helloActor     = system.actorOf(Props[HelloActor], name = "helloActor")
+  val rssPoller      = system.actorOf(Props(new OCRemixRssPollerActor(client)), name = "rssPoller")
   val configUpdater  = system.actorOf(Props(new UpdateTwitterConfigActor(client)), name = "configActor")
   val directMessager = system.actorOf(Props(new SendDirectMessageActor(client)), name = "directMessageActor")
   val tweeter        = system.actorOf(Props(new TweeterActor(client)), name = "tweeter")
@@ -153,13 +157,13 @@ object Main extends App {
     frequency    = 1 hour,
     receiver     = Actors.helloActor,
     message      = "test")
-
-  val twitterConfigUpdaterSchedule = Actors.system.scheduler.schedule(
-    initialDelay = 0 seconds,
-    frequency    = 1 day,
-    receiver     = Actors.configUpdater,
-    message      = "doit"
-  )
+//
+//  val twitterConfigUpdaterSchedule = Actors.system.scheduler.schedule(
+//    initialDelay = 0 seconds,
+//    frequency    = 1 day,
+//    receiver     = Actors.configUpdater,
+//    message      = "doit"
+//  )
 
   val rssPollerSchedule = Actors.system.scheduler.schedule(
     initialDelay = 0 seconds,
