@@ -63,7 +63,9 @@ case object RSS {
 
   // used to filter out the game and artist info from the description node of the
   // ocremix rss 2.0 response.
-  val itemDescriptionRegex = """(Original soundtrack by|by|ReMix of)? &lt;a href="(http[s]?://w{3}\.?ocremix.org/(game|artist)/\d+/[\w\s\-%\.\(\)]*)"&gt;([\w~\.\s]+)&lt;/a&gt;""".r
+  val itemDescriptionRegex = """(Original soundtrack by|by|ReMix of)? <a href="(http[s]?://w{3}\.?ocremix.org/(game|artist)/\d+/[\w\s\-%\.\(\)]*)">([\w~\.\s]+)</a>""".r
+
+  val noDTDRegex = """(?s)<!DOCTYPE [^>]+>(.+)""".r
 
   // matches an embedded youtube link, such as those found on a ocremix song page.
   // the capture group will match the unique video ID in the youtube link.
@@ -84,17 +86,16 @@ case object RSS {
 
   def extractRemixes(xml: scala.xml.Elem): List[RemixEntry] = {
     val xmlItems = xml \\ "channel" \ "item"
-    (for { item <- xmlItems } yield extractRemixEntry(item)).reverse.toList
+    (for { item <- xmlItems } yield extractRemixEntry(item)).toList
   }
 
   private def extractRemixEntry(xmlItem: scala.xml.Node): RemixEntry = {
-    val description = xmlItem \ "description" toString()
     val remixLink = xmlItem \ "guid" text
     val songIdRegex(songId) = remixLink
 
     RemixEntry(
-      remixers = extractRemixers(description),
-      title = xmlItem \ "title" toString(),
+      remixers = extractRemixers(xmlItem \ "description" text),
+      title = xmlItem \ "title" text,
       youtubeUrl = extractYoutubeLink(remixLink),
       writeupUrl = remixLink,
       songId = songId.toInt
@@ -102,7 +103,7 @@ case object RSS {
   }
 
   /**
-   * Follows redirected links until a non 301 status code is given or a limit is reached
+   * Follows redirected links until a non 3xx status code is given or a limit is reached
    */
   private def followRedirects(link: String, limit: Int = 10): Response = {
     assert(
@@ -110,18 +111,28 @@ case object RSS {
       """Follow redirect limit has been reached, maybe in a redirect loop?
         |Link: %s""".stripMargin.format(link)
     )
-    val response = Http(url(link))()
+   val response = Http(url(link))()
+
     response.getStatusCode match {
       case code if code / 100 == 2 => response
       case code if code / 100 == 3 => followRedirects(response.getHeader("Location"), limit - 1)
     }
   }
 
+  /**
+   * The Youtube URL from crawling the OCRemix link isn't suitable for tweeting, so modify
+   * it so it is shareable.
+   * @param remixLink a valid OCRemix song URL
+   * @throws MatchError when no youtube URL is found
+   * @return A shareable youtube link of the OCRemix song.
+   */
   private def extractYoutubeLink(remixLink: String): String = {
-    val responseBody = XML.loadString(followRedirects(remixLink).getResponseBody)
 
-    // the URL from crawling the OCRemix link isn't suitable for tweeting, so modify
-    // it so it is shareable.
+    // parse out DTD since there is no way to cache the DTD download, and each download takes minutes
+    val noDTDRegex(noDocTypeBody) = followRedirects(remixLink).getResponseBody
+
+    // hack to remove chars that require a proper DTD
+    val responseBody = XML.loadString(noDocTypeBody.replace("&nbsp;", "&#160;").replace("&raquo;","&#187;"))
 
     val embeddedYoutubeUrl = (responseBody \\ "_").filter {
       _.attribute("id").filter(_.text=="ytplayer").isDefined
@@ -135,11 +146,18 @@ case object RSS {
   }
 
   private def extractRemixers(xmlDescription: String): List[Remixer] = {
-    for {
-      hyperlink <- itemDescriptionRegex.findAllIn(xmlDescription.toString).toList
-      itemDescriptionRegex(prefix, url, artistOrGame, name) = hyperlink
-      if (artistOrGame == "artist" && prefix != "Original soundtrack by")
-    } yield Remixer(name, url)
+
+    // Not the most efficient way of parsing remix information, but it works
+    itemDescriptionRegex.findAllIn(xmlDescription) takeWhile ( item => {
+      val itemDescriptionRegex(prefix, url, artistOrGame, name) = item
+      prefix != "Original soundtrack by"
+    }) flatMap( item => {
+      val itemDescriptionRegex(prefix, url, artistOrGame, name) = item
+      if (artistOrGame == "artist")
+        Some(Remixer(name, url))
+      else
+        None
+    }) toList
   }
 
   def htmlDecode(str: String): String = {
@@ -148,16 +166,7 @@ case object RSS {
       replace("&lt;", "<").
       replace("&gt;", ">").
       replace("&quot;", "\"").
-      replace("&apos;", "\'")
+      replace("&apos;", "\'").
+      replace("&nbsp;", " ")
   }
-
-  // def tenLatestRemixes = {
-  //    for (xmlEither <- fetchRSS)
-  //      yield for {
-  //        xml <- xmlEither.right
-  //        xmlItem <- xml \ "rss" \ "channel" \ "item"
-  //        remixes <- extractRemixEntry(xmlItem).right
-  //      } yield remixes
-  //  }
-
 }

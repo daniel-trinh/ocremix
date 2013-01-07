@@ -1,10 +1,12 @@
-import org.scalatest.FunSpec
-import org.scalatest.BeforeAndAfter
-import org.scalatest.BeforeAndAfterAll
+import com.sixnothings.ocremix.RemixEntry
+import com.sixnothings.ocremix.Remixer
+import org.scalatest.{PrivateMethodTester, FunSpec, BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.matchers.ShouldMatchers
 import com.sixnothings.ocremix._
+import scala._
+import scala.xml.XML
 
-class OcremixSpec extends FunSpec with BeforeAndAfter with ShouldMatchers {
+class OcremixSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with PrivateMethodTester {
   val sample =
     """<?xml version="1.0" encoding="utf-8"?>
       |<rss version="2.0">
@@ -89,16 +91,101 @@ class OcremixSpec extends FunSpec with BeforeAndAfter with ShouldMatchers {
 
    describe("RSS") {
      describe("extractRemixes") {
+       RSS.extractRemixes(XML.loadString(sample)) should be ===
+         List(
+           RemixEntry(
+             List(
+               Remixer("Avitron", "http://www.ocremix.org/artist/11510/avitron"),
+               Remixer("Chris ~ Amaterasu" ,"http://www.ocremix.org/artist/10671/chris-amaterasu")
+             ),
+             "Chrono Cross 'A Dream Between Worlds'","http://www.youtube.com/watch?&v=g9sp3De7ocA","http://www.ocremix.org/remix/OCR02572/",2572
+           ),
 
+           RemixEntry(
+             List(
+               Remixer("DusK", "http://www.ocremix.org/artist/11774/dusk"),
+               Remixer("Rexy", "http://www.ocremix.org/artist/4655/rexy")
+             ),
+             "Ristar 'Stars on Ice'","http://www.youtube.com/watch?&v=9RABA5jyU-w","http://www.ocremix.org/remix/OCR02571/",2571
+           ),
+
+           RemixEntry(
+             List(
+               Remixer("Brandon Strader","http://www.ocremix.org/artist/5409/brandon-strader")
+             ),
+             "Scott Pilgrim vs. The World: The Game '1-UP'","http://www.youtube.com/watch?&v=5Co4mtubixw","http://www.ocremix.org/remix/OCR02570/",2570
+           ),
+
+           RemixEntry(
+             List(
+               Remixer("prophetik", "http://www.ocremix.org/artist/4695/prophetik")
+             ),
+             "Donkey Kong Country 3: Dixie Kong's Double Trouble! 'mojo gogo'","http://www.youtube.com/watch?&v=kzPNyzN_g1c","http://www.ocremix.org/remix/OCR02569/",2569
+           ),
+
+           RemixEntry(
+             List(
+               Remixer("Docjazz4", "http://www.ocremix.org/artist/12546/docjazz4"),
+               Remixer("FunkyEntropy", "http://www.ocremix.org/artist/12547/funkyentropy"),
+               Remixer("Theophany", "http://www.ocremix.org/artist/4605/theophany"),
+               Remixer("XPRTNovice", "http://www.ocremix.org/artist/12064/xprtnovice")
+             ),
+             "The Legend of Zelda: Majora's Mask 'Dawn of a New Day'","http://www.youtube.com/watch?&v=1NryFD9_hR0","http://www.ocremix.org/remix/OCR02568/",2568
+           ),
+
+           RemixEntry(
+             List(
+               Remixer("Argle", "http://www.ocremix.org/artist/12541/argle"),
+               Remixer("Koichi Kyuma","http://www.ocremix.org/artist/223/koichi-kyuma")
+             ),
+             "Metroid Prime 'Relics of an Ancient Race'","http://www.youtube.com/watch?&v=x21k14XcHow","http://www.ocremix.org/remix/OCR02567/",2567
+           ),
+
+           RemixEntry(
+             List(
+               Remixer("Brandon Strader","http://www.ocremix.org/artist/5409/brandon-strader"),
+               Remixer("Chernabogue", "http://www.ocremix.org/artist/12540/chernabogue")
+             ),
+             "Final Fantasy 'Requiem for a Dying World'","http://www.youtube.com/watch?&v=5PRo-3jOi3A","http://www.ocremix.org/remix/OCR02566/",2566
+           ),
+
+           RemixEntry(
+             List(
+               Remixer("some1namedjeff", "http://www.ocremix.org/artist/10683/some1namedjeff")
+             ),
+             "Cardinal Quest 'The World After Asterion'","http://www.youtube.com/watch?&v=IIUVmHUHuzQ","http://www.ocremix.org/remix/OCR02565/",2565
+           ),
+
+           RemixEntry(
+             List(
+               Remixer("Archangel", "http://www.ocremix.org/artist/10136/archangel")
+             ),
+             "Wild Arms 'A Morning at the Abbey'","http://www.youtube.com/watch?&v=i1HCxmMMfEE","http://www.ocremix.org/remix/OCR02564/",2564
+           ),
+
+           RemixEntry(
+             List(
+               Remixer("Devastus", "http://www.ocremix.org/artist/11943/devastus")
+             ),
+             "Sonic & Knuckles 'Airborne'","http://www.youtube.com/watch?&v=jcExvvbtFpA","http://www.ocremix.org/remix/OCR02563/",2563
+           )
+         )
      }
      describe("extractRemixEntry") {
-
      }
      describe("extractYoutubeLink") {
-
+       val extractYoutubeLink = PrivateMethod[String]('extractYoutubeLink)
+       RSS invokePrivate extractYoutubeLink("http://www.ocremix.org/remix/OCR02566/")
      }
      describe("extractRemixers") {
-
+       val extractRemixers = PrivateMethod[List[Remixer]]('extractRemixers)
+       RSS invokePrivate extractRemixers((XML.loadString(sample) \\ "item" \\ "description" head) text) should be ===
+       List(
+         Remixer("Avitron", "http://www.ocremix.org/artist/11510/avitron"),
+         Remixer("Chris ~ Amaterasu" ,"http://www.ocremix.org/artist/10671/chris-amaterasu")
+        )
+     }
+     describe("followRedirects") {
      }
    }
 
