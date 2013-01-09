@@ -13,6 +13,7 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "1.8" % "test",
+  "org.scalamock" %% "scalamock-scalatest-support" % "latest.integration" % "test",
   "com.codahale" % "jerkson_2.9.1" % "0.5.0",
   "net.databinder.dispatch" %% "dispatch-core" % "0.9.4",
   "com.typesafe" % "config" % "1.0.0",
