@@ -90,114 +90,144 @@ class OcremixSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with P
     """.stripMargin
 
    describe("RSS") {
+     val RSS.descriptionSplitterRegex(game, remixers, composers) = (XML.loadString(sample) \\ "item" \\ "description" head).text
+
      describe("extractRemixes") {
-       RSS.extractRemixes(XML.loadString(sample)) should be ===
+      RSS.extractRemixes(XML.loadString(sample)) should be ===
          List(
            RemixEntry(
              List(
-               Remixer("Avitron", "http://www.ocremix.org/artist/11510/avitron"),
-               Remixer("Chris ~ Amaterasu" ,"http://www.ocremix.org/artist/10671/chris-amaterasu")
+               Remixer("http://www.ocremix.org/artist/10671/chris-amaterasu","Chris ~ Amaterasu"),
+               Remixer("http://www.ocremix.org/artist/11510/avitron","Avitron")
              ),
-             "Chrono Cross 'A Dream Between Worlds'","http://www.youtube.com/watch?&v=g9sp3De7ocA","http://www.ocremix.org/remix/OCR02572/",2572
-           ),
+             List(
+               Composer("http://www.ocremix.org/artist/4/yasunori-mitsuda","Yasunori Mitsuda")
+             ),
+             Game("http://www.ocremix.org/game/17/","Chrono Cross"),"Chrono Cross 'A Dream Between Worlds'","http://www.youtube.com/watch?&v=g9sp3De7ocA","http://www.ocremix.org/remix/OCR02572/",2572),
 
            RemixEntry(
              List(
-               Remixer("DusK", "http://www.ocremix.org/artist/11774/dusk"),
-               Remixer("Rexy", "http://www.ocremix.org/artist/4655/rexy")
+               Remixer("http://www.ocremix.org/artist/4655/rexy","Rexy"),
+               Remixer("http://www.ocremix.org/artist/11774/dusk","DusK")
              ),
-             "Ristar 'Stars on Ice'","http://www.youtube.com/watch?&v=9RABA5jyU-w","http://www.ocremix.org/remix/OCR02571/",2571
-           ),
+             List(
+               Composer("http://www.ocremix.org/artist/160/tomoko-sasaki","Tomoko Sasaki"),
+               Composer("http://www.ocremix.org/artist/161/naofumi-hataya","Naofumi Hataya"),
+               Composer("http://www.ocremix.org/artist/300/masafumi-ogata","Masafumi Ogata")
+             ),
+             Game("http://www.ocremix.org/game/131/","Ristar"),"Ristar 'Stars on Ice'","http://www.youtube.com/watch?&v=9RABA5jyU-w","http://www.ocremix.org/remix/OCR02571/",2571),
 
            RemixEntry(
              List(
-               Remixer("Brandon Strader","http://www.ocremix.org/artist/5409/brandon-strader")
+               Remixer("http://www.ocremix.org/artist/5409/brandon-strader","Brandon Strader")
              ),
-             "Scott Pilgrim vs. The World: The Game '1-UP'","http://www.youtube.com/watch?&v=5Co4mtubixw","http://www.ocremix.org/remix/OCR02570/",2570
-           ),
+             List(
+               Composer("http://www.ocremix.org/artist/12551/peter-berkman","Peter Berkman"),
+               Composer("http://www.ocremix.org/artist/12550/luke-silas","Luke Silas"),
+               Composer("http://www.ocremix.org/artist/12548/ary-warnaar","Ary Warnaar"),
+               Composer("http://www.ocremix.org/artist/9263/anamanaguchi","Anamanaguchi")
+             ),
+             Game("http://www.ocremix.org/game/820/","Scott Pilgrim vs. The World: The Game"),"Scott Pilgrim vs. The World: The Game '1-UP'","http://www.youtube.com/watch?&v=5Co4mtubixw","http://www.ocremix.org/remix/OCR02570/",2570),
 
            RemixEntry(
              List(
-               Remixer("prophetik", "http://www.ocremix.org/artist/4695/prophetik")
+               Remixer("http://www.ocremix.org/artist/4695/prophetik","prophetik")
              ),
-             "Donkey Kong Country 3: Dixie Kong's Double Trouble! 'mojo gogo'","http://www.youtube.com/watch?&v=kzPNyzN_g1c","http://www.ocremix.org/remix/OCR02569/",2569
-           ),
+             List(
+               Composer("http://www.ocremix.org/artist/101/eveline-novakovic","Eveline Novakovic"),
+               Composer("http://www.ocremix.org/artist/100/david-wise","David Wise")
+             ),
+             Game("http://www.ocremix.org/game/310/","Donkey Kong Country 3: Dixie Kong's Double Trouble!"),"Donkey Kong Country 3: Dixie Kong's Double Trouble! 'mojo gogo'","http://www.youtube.com/watch?&v=kzPNyzN_g1c","http://www.ocremix.org/remix/OCR02569/",2569),
 
            RemixEntry(
              List(
-               Remixer("Docjazz4", "http://www.ocremix.org/artist/12546/docjazz4"),
-               Remixer("FunkyEntropy", "http://www.ocremix.org/artist/12547/funkyentropy"),
-               Remixer("Theophany", "http://www.ocremix.org/artist/4605/theophany"),
-               Remixer("XPRTNovice", "http://www.ocremix.org/artist/12064/xprtnovice")
+               Remixer("http://www.ocremix.org/artist/12064/xprtnovice","XPRTNovice"),
+               Remixer("http://www.ocremix.org/artist/4605/theophany","Theophany"),
+               Remixer("http://www.ocremix.org/artist/12547/funkyentropy","FunkyEntropy"),
+               Remixer("http://www.ocremix.org/artist/12546/docjazz4","Docjazz4")
              ),
-             "The Legend of Zelda: Majora's Mask 'Dawn of a New Day'","http://www.youtube.com/watch?&v=1NryFD9_hR0","http://www.ocremix.org/remix/OCR02568/",2568
-           ),
+             List(
+               Composer("http://www.ocremix.org/artist/542/toru-minegishi","Toru Minegishi"),
+               Composer("http://www.ocremix.org/artist/2/koji-kondo","Koji Kondo")
+             ),
+             Game("http://www.ocremix.org/game/490/","The Legend of Zelda: Majora's Mask"),"The Legend of Zelda: Majora's Mask 'Dawn of a New Day'","http://www.youtube.com/watch?&v=1NryFD9_hR0","http://www.ocremix.org/remix/OCR02568/",2568),
 
            RemixEntry(
              List(
-               Remixer("Argle", "http://www.ocremix.org/artist/12541/argle"),
-               Remixer("Koichi Kyuma","http://www.ocremix.org/artist/223/koichi-kyuma")
+               Remixer("http://www.ocremix.org/artist/12541/argle","Argle")
              ),
-             "Metroid Prime 'Relics of an Ancient Race'","http://www.youtube.com/watch?&v=x21k14XcHow","http://www.ocremix.org/remix/OCR02567/",2567
-           ),
+             List(
+               Composer("http://www.ocremix.org/artist/223/koichi-kyuma","Koichi Kyuma"),
+               Composer("http://www.ocremix.org/artist/82/kenji-yamamoto-i","Kenji Yamamoto (I)")
+             ),
+             Game("http://www.ocremix.org/game/425/","Metroid Prime"),"Metroid Prime 'Relics of an Ancient Race'","http://www.youtube.com/watch?&v=x21k14XcHow","http://www.ocremix.org/remix/OCR02567/",2567),
 
            RemixEntry(
              List(
-               Remixer("Brandon Strader","http://www.ocremix.org/artist/5409/brandon-strader"),
-               Remixer("Chernabogue", "http://www.ocremix.org/artist/12540/chernabogue")
+               Remixer("http://www.ocremix.org/artist/12540/chernabogue","Chernabogue"),
+               Remixer("http://www.ocremix.org/artist/5409/brandon-strader","Brandon Strader")
              ),
-             "Final Fantasy 'Requiem for a Dying World'","http://www.youtube.com/watch?&v=5PRo-3jOi3A","http://www.ocremix.org/remix/OCR02566/",2566
-           ),
+             List(
+               Composer("http://www.ocremix.org/artist/3/nobuo-uematsu","Nobuo Uematsu")
+             ),
+             Game("http://www.ocremix.org/game/8/","Final Fantasy"),"Final Fantasy 'Requiem for a Dying World'","http://www.youtube.com/watch?&v=5PRo-3jOi3A","http://www.ocremix.org/remix/OCR02566/",2566),
 
            RemixEntry(
              List(
-               Remixer("some1namedjeff", "http://www.ocremix.org/artist/10683/some1namedjeff")
+               Remixer("http://www.ocremix.org/artist/10683/some1namedjeff","some1namedjeff")
              ),
-             "Cardinal Quest 'The World After Asterion'","http://www.youtube.com/watch?&v=IIUVmHUHuzQ","http://www.ocremix.org/remix/OCR02565/",2565
-           ),
+             List(
+               Composer("http://www.ocremix.org/artist/12365/whitaker-trebella","Whitaker Trebella")
+             ),
+             Game("http://www.ocremix.org/game/817/","Cardinal Quest"),"Cardinal Quest 'The World After Asterion'","http://www.youtube.com/watch?&v=IIUVmHUHuzQ","http://www.ocremix.org/remix/OCR02565/",2565),
 
            RemixEntry(
              List(
-               Remixer("Archangel", "http://www.ocremix.org/artist/10136/archangel")
+               Remixer("http://www.ocremix.org/artist/10136/archangel","Archangel")
              ),
-             "Wild Arms 'A Morning at the Abbey'","http://www.youtube.com/watch?&v=i1HCxmMMfEE","http://www.ocremix.org/remix/OCR02564/",2564
-           ),
+             List(
+               Composer("http://www.ocremix.org/artist/39/michiko-naruke","Michiko Naruke")
+             ),
+             Game("http://www.ocremix.org/game/230/","Wild Arms"),"Wild Arms 'A Morning at the Abbey'","http://www.youtube.com/watch?&v=i1HCxmMMfEE","http://www.ocremix.org/remix/OCR02564/",2564),
 
            RemixEntry(
              List(
-               Remixer("Devastus", "http://www.ocremix.org/artist/11943/devastus")
+               Remixer("http://www.ocremix.org/artist/11943/devastus","Devastus")
              ),
-             "Sonic & Knuckles 'Airborne'","http://www.youtube.com/watch?&v=jcExvvbtFpA","http://www.ocremix.org/remix/OCR02563/",2563
-           )
+             List(
+               Composer("http://www.ocremix.org/artist/910/tomonori-sawada","Tomonori Sawada"),
+               Composer("http://www.ocremix.org/artist/41/jun-senoue","Jun Senoue"),
+               Composer("http://www.ocremix.org/artist/233/howard-drossin","Howard Drossin")
+             ),
+             Game("http://www.ocremix.org/game/147/","Sonic & Knuckles"),"Sonic & Knuckles 'Airborne'","http://www.youtube.com/watch?&v=jcExvvbtFpA","http://www.ocremix.org/remix/OCR02563/",2563)
          )
+
      }
      describe("extractRemixEntry") {
+      val extractRemixEntry =  PrivateMethod[RemixEntry]('extractRemixEntry)
+       RSS invokePrivate extractRemixEntry(XML.loadString(sample) \\ "item" head) should be ===
+         RemixEntry(
+           List(
+             Remixer("http://www.ocremix.org/artist/10671/chris-amaterasu","Chris ~ Amaterasu"),
+             Remixer("http://www.ocremix.org/artist/11510/avitron","Avitron")
+           ),
+           List(
+             Composer("http://www.ocremix.org/artist/4/yasunori-mitsuda","Yasunori Mitsuda")
+           ),
+           Game("http://www.ocremix.org/game/17/","Chrono Cross"),"Chrono Cross 'A Dream Between Worlds'","http://www.youtube.com/watch?&v=g9sp3De7ocA","http://www.ocremix.org/remix/OCR02572/",2572
+         )
      }
      describe("extractYoutubeLink") {
        val extractYoutubeLink = PrivateMethod[String]('extractYoutubeLink)
-       RSS invokePrivate extractYoutubeLink("http://www.ocremix.org/remix/OCR02566/")
+       RSS invokePrivate extractYoutubeLink("http://www.ocremix.org/remix/OCR02566/") should be === "http://www.youtube.com/watch?&v=5PRo-3jOi3A"
      }
      describe("extractRemixers") {
        val extractRemixers = PrivateMethod[List[Remixer]]('extractRemixers)
-       RSS invokePrivate extractRemixers((XML.loadString(sample) \\ "item" \\ "description" head) text) should be ===
-       List(
-         Remixer("Avitron", "http://www.ocremix.org/artist/11510/avitron"),
-         Remixer("Chris ~ Amaterasu" ,"http://www.ocremix.org/artist/10671/chris-amaterasu")
-        )
-     }
-     describe("followRedirects") {
+       RSS invokePrivate extractRemixers(remixers) should be ===
+         List(
+           Remixer("http://www.ocremix.org/artist/10671/chris-amaterasu","Chris ~ Amaterasu"),
+           Remixer("http://www.ocremix.org/artist/11510/avitron","Avitron")
+         )
      }
    }
-
-  // describe("apply methods") {
-  //   it("class -- Bar") {
-  //     val bar = new Bar()
-  //     bar() should be === 0
-  //   }
-  //   it("object -- BarMaker") {
-  //     val bar = BarMaker()
-  //     bar() should be === 0
-  //   }
-  //}
-  
 }
