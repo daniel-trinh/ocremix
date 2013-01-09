@@ -22,6 +22,8 @@ case object OCRemix extends Enumeration {
  */
 case class RemixEntry(
   remixers: List[Remixer],
+  artists: List[Composer],
+  game: Game,
   title: String,
   youtubeUrl: String,
   writeupUrl: String,
@@ -51,19 +53,31 @@ case class RemixEntry(
   }
 
   private def remixersToString(remixers: List[Remixer]): String = {
-    remixers.foldLeft("") {
-      (remixers, remixer) => remixers + ", " + remixer.name
-    } + "."
+    remixers match {
+      case head :: tail => {
+        head.name + tail.foldLeft("") {
+          (accu, remixer) => accu + ", " + remixer.name
+        } + "."
+      }
+      case Nil => ""
+    }
   }
 }
 
-case class Remixer(name: String, url: String)
+case class Remixer(url: String, name: String)
+
+case class Composer(url: String, name: String)
+
+case class Game(url: String, name: String)
 
 case object RSS {
 
+  val descriptionSplitterRegex = """(?s).*ReMix of(.+) by (.+)Original soundtrack by(.+)""".r
+
   // used to filter out the game and artist info from the description node of the
   // ocremix rss 2.0 response.
-  val itemDescriptionRegex = """(Original soundtrack by|by|ReMix of)? <a href="(http[s]?://w{3}\.?ocremix.org/(game|artist)/\d+/[\w\s\-%\.\(\)]*)">([\w~\.\s]+)</a>""".r
+//  val itemDescriptionRegex = """(Original soundtrack by|by|ReMix of)? <a href="(http[s]?://w{3}\.?ocremix.org/(game|artist)/\d+/[\w\s\-%\.\(\)]*)">([\w~\.\s]+)</a>""".r
+  val itemDescriptionRegex = """(?s)<a href="(http[s]?://w{3}\.?ocremix.org/(game|artist)/\d+/[^>]*)/?">([^>]+)</a>""".r
 
   val noDTDRegex = """(?s)<!DOCTYPE [^>]+>(.+)""".r
 
@@ -93,8 +107,13 @@ case object RSS {
     val remixLink = xmlItem \ "guid" text
     val songIdRegex(songId) = remixLink
 
+
+    val descriptionSplitterRegex(gameGroup, remixersGroup, artistsGroup) = xmlItem \ "description" text
+
     RemixEntry(
-      remixers = extractRemixers(xmlItem \ "description" text),
+      remixers = extractRemixers(remixersGroup),
+      artists = extractComposers(artistsGroup),
+      game = extractGame(gameGroup),
       title = xmlItem \ "title" text,
       youtubeUrl = extractYoutubeLink(remixLink),
       writeupUrl = remixLink,
@@ -138,26 +157,28 @@ case object RSS {
       _.attribute("id").filter(_.text=="ytplayer").isDefined
     } \ "@data" text
 
-    println(embeddedYoutubeUrl + "wtf")
-
     val embeddedYoutubeRegex(videoId) = embeddedYoutubeUrl
 
     "http://www.youtube.com/watch?&v=" + videoId
   }
 
-  private def extractRemixers(xmlDescription: String): List[Remixer] = {
+  private def extractRemixers(remixerGroup: String): List[Remixer] = {
+    itemDescriptionRegex.findAllIn(remixerGroup).foldLeft(List[Remixer]()) { (accu, item) =>
+      val itemDescriptionRegex(url, _, name) = item
+      Remixer(url, name) :: accu
+    }
+  }
 
-    // Not the most efficient way of parsing remix information, but it works
-    itemDescriptionRegex.findAllIn(xmlDescription) takeWhile ( item => {
-      val itemDescriptionRegex(prefix, url, artistOrGame, name) = item
-      prefix != "Original soundtrack by"
-    }) flatMap( item => {
-      val itemDescriptionRegex(prefix, url, artistOrGame, name) = item
-      if (artistOrGame == "artist")
-        Some(Remixer(name, url))
-      else
-        None
-    }) toList
+  private def extractComposers(composerGroup: String): List[Composer]  = {
+    itemDescriptionRegex.findAllIn(composerGroup).foldLeft(List[Composer]()) { (accu, item) =>
+      val itemDescriptionRegex(url, _, name) = item
+      Composer(url, name) :: accu
+    }
+  }
+
+  private def extractGame(gameGroup: String): Game = {
+    val itemDescriptionRegex(url, _, name) = itemDescriptionRegex.findFirstIn(gameGroup).get
+    Game(url, name)
   }
 
   def htmlDecode(str: String): String = {
