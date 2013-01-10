@@ -14,24 +14,30 @@ case object OCRemix extends Enumeration {
 }
 
 /**
+ * Holds information of a particular OCRemix entry.
  *
- * @param title
- * @param youtubeUrl
- * @param writeupUrl
- * @param songId
+ * @param title Remix name (and usually game name as well).
+ * @param youtubeUrl Link to listen to remix on youtube.
+ * @param writeupUrl Link to direct download remix or look at reviews.
+ * @param songId Unique ID for remix, defined by OCR. Every remix has an ID.
  */
 case class RemixEntry(
   remixers: List[Remixer],
-  artists: List[Composer],
+  composers: List[Composer],
   game: Game,
   title: String,
   youtubeUrl: String,
   writeupUrl: String,
   songId: Int) {
 
+  // TODO: refactor this method to be less boilerplatey
   def toTweetable: Tweetable = {
-    val v1 = "%d: %s by %s Y: %s W: %s".
-      format(songId, title, remixersToString(remixers), youtubeUrl, writeupUrl)
+
+    lazy val v0 = "%d: %s by %s Original by %s Y: %s W: %s".
+      format(songId, title, remixItemsToString(remixers), remixItemsToString(composers), youtubeUrl, writeupUrl)
+
+    lazy val v1 = "%d: %s by %s Y: %s W: %s".
+      format(songId, title, remixItemsToString(remixers), youtubeUrl, writeupUrl)
 
     lazy val v2 = "%d: %s. Y: %s W: %s".
       format(songId, title, youtubeUrl, writeupUrl)
@@ -42,7 +48,9 @@ case class RemixEntry(
     lazy val v4 = "%d. Y: %s".
       format(songId, youtubeUrl)
 
-    if (Tweetable.isTweetable(v1))
+    if (Tweetable.isTweetable(v0))
+      Tweetable(v0)
+    else if (Tweetable.isTweetable(v1))
       Tweetable(v1)
     else if (Tweetable.isTweetable(v2))
       Tweetable(v2)
@@ -52,7 +60,7 @@ case class RemixEntry(
       Tweetable(v4)
   }
 
-  private def remixersToString(remixers: List[Remixer]): String = {
+  private def remixItemsToString(remixers: List[RemixItem]): String = {
     remixers match {
       case head :: tail => {
         head.name + tail.foldLeft("") {
@@ -64,11 +72,17 @@ case class RemixEntry(
   }
 }
 
-case class Remixer(url: String, name: String)
+trait RemixItem {
+  val url: String
+  val name: String
+}
 
-case class Composer(url: String, name: String)
+case class Remixer(url: String, name: String) extends RemixItem
 
-case class Game(url: String, name: String)
+case class Composer(url: String, name: String) extends RemixItem
+
+case class Game(url: String, name: String) extends RemixItem
+
 
 case object RSS {
 
@@ -107,12 +121,11 @@ case object RSS {
     val remixLink = xmlItem \ "guid" text
     val songIdRegex(songId) = remixLink
 
-
     val descriptionSplitterRegex(gameGroup, remixersGroup, artistsGroup) = xmlItem \ "description" text
 
     RemixEntry(
       remixers = extractRemixers(remixersGroup),
-      artists = extractComposers(artistsGroup),
+      composers = extractComposers(artistsGroup),
       game = extractGame(gameGroup),
       title = xmlItem \ "title" text,
       youtubeUrl = extractYoutubeLink(remixLink),
