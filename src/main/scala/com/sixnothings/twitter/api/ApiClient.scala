@@ -3,16 +3,11 @@ package com.sixnothings.twitter.api
 import dispatch._
 import dispatch.oauth._
 import com.codahale.jerkson.Json._
-import java.net.URLDecoder
 import com.sixnothings.config._
 import com.sixnothings.twitter.json._
 
 class ApiClient(someOauth: Auth) {
   val twitterOauth = someOauth
-
-  def sendError(error: String) = "yep"
-
-  def asyncSendError = "yep"
 
   def api = url(TwitterSettings.twitterUrls("api"))
 
