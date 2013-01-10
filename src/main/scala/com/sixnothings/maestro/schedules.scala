@@ -7,7 +7,6 @@ import com.sixnothings.config.{TwitterHandle, TwitterSettings}
 import akka.event.Logging
 import com.sixnothings.ocremix.RSS
 import com.codahale.jerkson.Json._
-import com.sixnothings.twitter.json.{Tweet}
 
 /**
  * Used to enable actor logging in actor classes that inherit from this.
@@ -63,10 +62,10 @@ class SendDirectMessageActor(
   def receive = {
     case (message: String) => {
       log.error(message)
-//      client.directMessage(handle, message).onSuccess {
-//        case Right(response) => log.info(response)
-//        case Left(error) => log.error(error)
-//      }
+      client.directMessage(handle, message).onSuccess {
+        case Right(response) => log.info(response)
+        case Left(error) => log.error(error)
+      }
     }
   }
 }
@@ -80,7 +79,7 @@ class TweeterActor(client: ApiClient) extends LoggedActor {
       // onSuccess handles both success and failure, because
       // client methods are designed to never throw an exception (by using
       // Either).
-      client.statusesUpdate(tweet).onSuccess {
+      client.statusesUpdate(tweet)() match {
         case Right(response) => log.info(response)
         case Left(error) =>
           Actors.directMessager ! (error)
@@ -101,27 +100,31 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
         case Right(rssResponse) => {
           val remixes = RSS.extractRemixes(rssResponse)
           // TODO: extract this block of code into a function somewhere else
-          val idRegex = """^(\d+):""".r
+          val idRegex = """(\d+):.+""".r
+
           client.userTimeline(
             userId = TwitterSettings.ocremixHandle.id,
             screenName = TwitterSettings.ocremixHandle.screenName,
             count = 10
           ).onSuccess {
             case Right(jsonResponse) => {
-              val latestRemixTweets = parse[List[Tweet]](jsonResponse)
+              val latestRemixTweets = parse[List[Map[String, Any]]](jsonResponse)
 
+              // extract latest tweet ID from our twitter stream. Assumes head of list is latest tweet.
               val latestRemixTweetId = latestRemixTweets match {
                 case Nil => "0"
-                case tweet :: _ => tweet match {
+                case tweet :: _ => tweet("text") match {
                   case idRegex(id) => id
                 }
               }
-
-              remixes.takeWhile { remix =>
-                remix.songId >= latestRemixTweetId.toInt
-              }.foreach { untweetedRemix =>
+              // we only want to tweet the latest remixes
+              remixes.filter { remix =>
+                remix.songId > latestRemixTweetId.toInt
+                // remixes are ordered from newest to oldest, but we want to tweet oldest to newest,
+                // so reverse them
+              }.reverse.foreach { untweetedRemix =>
+//                Actors.tweeter ! untweetedRemix.toTweetable
                 log.info(untweetedRemix.toTweetable.toString)
-                //Actors.tweeter ! untweetedRemix.toTweetable
               }
             }
             case Left(error) => Actors.directMessager ! error
@@ -129,9 +132,6 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
         }
         case Left(error) => Actors.directMessager ! (error)
       }
-    }
-    case _ => {
-      "???"
     }
   }
 }
@@ -157,13 +157,13 @@ object Main extends App {
     frequency    = 1 hour,
     receiver     = Actors.helloActor,
     message      = "test")
-//
-//  val twitterConfigUpdaterSchedule = Actors.system.scheduler.schedule(
-//    initialDelay = 0 seconds,
-//    frequency    = 1 day,
-//    receiver     = Actors.configUpdater,
-//    message      = "doit"
-//  )
+
+  val twitterConfigUpdaterSchedule = Actors.system.scheduler.schedule(
+    initialDelay = 0 seconds,
+    frequency    = 1 day,
+    receiver     = Actors.configUpdater,
+    message      = "doit"
+  )
 
   val rssPollerSchedule = Actors.system.scheduler.schedule(
     initialDelay = 0 seconds,
