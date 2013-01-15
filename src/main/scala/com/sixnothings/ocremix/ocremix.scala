@@ -83,7 +83,6 @@ case class Composer(url: String, name: String) extends RemixItem
 
 case class Game(url: String, name: String) extends RemixItem
 
-
 case object RSS {
 
   val descriptionSplitterRegex = """(?s).*ReMix of(.+) by (.+)Original soundtrack by(.+)""".r

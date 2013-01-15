@@ -13,6 +13,18 @@ import com.codahale.jerkson.Json._
  */
 abstract class LoggedActor extends Actor {
   val log = Logging(context.system, this)
+
+  override def preRestart(reason: Throwable, message: Option[Any]) {
+    println("wtf")
+    log.error(
+      """
+        |Error message: %s
+        |Stack Trace: %s
+      """.stripMargin.format(reason.getMessage, reason.getStackTraceString))
+    context.actorFor("../directMessager") ! reason.getMessage
+    context.children foreach context.stop
+    postStop()
+  }
 }
 
 /**
@@ -40,7 +52,7 @@ class UpdateTwitterConfigActor(client: ApiClient) extends LoggedActor {
           log.info("Config updated: %s".format(config.toString))
         }
         case Left(error) => {
-          Actors.directMessager ! (error)
+          context.actorFor("../directMessager") ! (error)
           log.error(error)
         }
       }
@@ -82,7 +94,7 @@ class TweeterActor(client: ApiClient) extends LoggedActor {
       client.statusesUpdate(tweet)() match {
         case Right(response) => log.info(response)
         case Left(error) =>
-          Actors.directMessager ! (error)
+          context.actorFor("../directMessager") ! (error)
           log.error(error)
       }
     }
@@ -112,63 +124,87 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
 
               // extract latest tweet ID from our twitter stream. Assumes head of list is latest tweet.
               val latestRemixTweetId = latestRemixTweets match {
+                // TODO: replace this with a number besides 0?
                 case Nil => "0"
                 case tweet :: _ => tweet("text") match {
                   case idRegex(id) => id
                 }
               }
               // we only want to tweet the latest remixes
+
               remixes.filter { remix =>
                 remix.songId > latestRemixTweetId.toInt
                 // remixes are ordered from newest to oldest, but we want to tweet oldest to newest,
                 // so reverse them
               }.reverse.foreach { untweetedRemix =>
-//                Actors.tweeter ! untweetedRemix.toTweetable
+//                context.actorFor("../tweeter") ! untweetedRemix.toTweetable
                 log.info(untweetedRemix.toTweetable.toString)
               }
             }
-            case Left(error) => Actors.directMessager ! error
+            case Left(error) => context.actorFor("../directmessager") ! error
           }
         }
-        case Left(error) => Actors.directMessager ! (error)
+        case Left(error) => context.actorFor("../directmessager") ! error
       }
     }
+  }
+}
+
+class Supervisor extends LoggedActor {
+
+  val helloActor     = context.actorOf(Props[HelloActor], name = "helloActor")
+  val rssPoller      = context.actorOf(Props(new OCRemixRssPollerActor(MySystem.client)), name = "rssPoller")
+  val configUpdater  = context.actorOf(Props(new UpdateTwitterConfigActor(MySystem.client)), name = "configUpdater")
+  val directMessager = context.actorOf(Props(new SendDirectMessageActor(MySystem.client)), name = "directMessager")
+  val tweeter        = context.actorOf(Props(new TweeterActor(MySystem.client)), name = "tweeter")
+
+
+  val helloWorld = MySystem().scheduler.schedule(
+    initialDelay = 1 milliseconds,
+    frequency    = 1 hour,
+    receiver     = context.actorFor("../helloActor"),
+    message      = "test")
+
+  val twitterConfigUpdaterSchedule = MySystem().scheduler.schedule(
+    initialDelay = 0 seconds,
+    frequency    = 1 day,
+    receiver     = context.actorFor("../configUpdater"),
+    message      = "doit"
+  )
+
+  val rssPollerSchedule = MySystem().scheduler.schedule(
+    initialDelay = 0 seconds,
+    frequency    = 30 minutes,
+    receiver     = context.actorFor("../rssPoller"),
+    message      = "doit"
+  )
+
+  def receive = {
+    case p: Props ⇒ sender ! context.actorOf(p)
   }
 }
 
 case object MySystem {
   val system = ActorSystem("Scheduler")
   def apply() = system
+  val client = new ApiClient(new Auth(""))
 }
 
 case object Actors {
-  val client = new ApiClient(new Auth(""))
-  val system = MySystem()
-  val helloActor     = system.actorOf(Props[HelloActor], name = "helloActor")
-  val rssPoller      = system.actorOf(Props(new OCRemixRssPollerActor(client)), name = "rssPoller")
-  val configUpdater  = system.actorOf(Props(new UpdateTwitterConfigActor(client)), name = "configActor")
-  val directMessager = system.actorOf(Props(new SendDirectMessageActor(client)), name = "directMessageActor")
-  val tweeter        = system.actorOf(Props(new TweeterActor(client)), name = "tweeter")
+
 }
 
 object Main extends App {
-  val helloWorld = Actors.system.scheduler.schedule(
-    initialDelay = 1 milliseconds,
-    frequency    = 1 hour,
-    receiver     = Actors.helloActor,
-    message      = "test")
+  val system = MySystem()
 
-  val twitterConfigUpdaterSchedule = Actors.system.scheduler.schedule(
-    initialDelay = 0 seconds,
-    frequency    = 1 day,
-    receiver     = Actors.configUpdater,
-    message      = "doit"
-  )
+  val supervisor = system.actorOf(Props[Supervisor], "supervisor")
 
-  val rssPollerSchedule = Actors.system.scheduler.schedule(
-    initialDelay = 0 seconds,
-    frequency    = 30 minutes,
-    receiver     = Actors.rssPoller,
-    message      = "doit"
-  )
+  import akka.actor.{ Actor, DeadLetter, Props }
+
+  val listener = system.actorOf(Props(new Actor {
+    def receive = {
+      case d: DeadLetter ⇒ println(d)
+    }
+  }))
+  system.eventStream.subscribe(listener, classOf[DeadLetter])
 }
