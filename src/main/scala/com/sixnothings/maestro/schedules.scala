@@ -15,13 +15,12 @@ abstract class LoggedActor extends Actor {
   val log = Logging(context.system, this)
 
   override def preRestart(reason: Throwable, message: Option[Any]) {
-    println("wtf")
     log.error(
       """
         |Error message: %s
         |Stack Trace: %s
       """.stripMargin.format(reason.getMessage, reason.getStackTraceString))
-    context.actorFor("../directMessager") ! reason.getMessage
+    context.actorFor("../directMessager") ! "Unhandled exception:" + reason.getMessage
     context.children foreach context.stop
     postStop()
   }
@@ -33,7 +32,18 @@ abstract class LoggedActor extends Actor {
 class HelloActor extends LoggedActor {
   def receive = {
     case "hello" => log.info("hello back at you")
+    case "world" => context.actorFor("../world") ! "hello"
     case msg     => log.info(msg.toString)
+  }
+}
+
+/**
+ * Dummy actor used for testing to make sure Akka is set up properly
+ */
+class WorldActor extends LoggedActor {
+  def receive = {
+    case "hello" => log.info("hello world!")
+    case msg => log.info("wtf?" + msg.toString)
   }
 }
 
@@ -153,29 +163,29 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
 class Supervisor extends LoggedActor {
 
   val helloActor     = context.actorOf(Props[HelloActor], name = "helloActor")
+  val worldActor     = context.actorOf(Props[WorldActor], name = "world")
   val rssPoller      = context.actorOf(Props(new OCRemixRssPollerActor(MySystem.client)), name = "rssPoller")
   val configUpdater  = context.actorOf(Props(new UpdateTwitterConfigActor(MySystem.client)), name = "configUpdater")
   val directMessager = context.actorOf(Props(new SendDirectMessageActor(MySystem.client)), name = "directMessager")
   val tweeter        = context.actorOf(Props(new TweeterActor(MySystem.client)), name = "tweeter")
 
-
   val helloWorld = MySystem().scheduler.schedule(
     initialDelay = 1 milliseconds,
     frequency    = 1 hour,
-    receiver     = context.actorFor("../helloActor"),
-    message      = "test")
+    receiver     = helloActor,
+    message      = "world")
 
   val twitterConfigUpdaterSchedule = MySystem().scheduler.schedule(
     initialDelay = 0 seconds,
     frequency    = 1 day,
-    receiver     = context.actorFor("../configUpdater"),
+    receiver     = configUpdater,
     message      = "doit"
   )
 
   val rssPollerSchedule = MySystem().scheduler.schedule(
     initialDelay = 0 seconds,
     frequency    = 30 minutes,
-    receiver     = context.actorFor("../rssPoller"),
+    receiver     = rssPoller,
     message      = "doit"
   )
 
@@ -190,10 +200,6 @@ case object MySystem {
   val client = new ApiClient(new Auth(""))
 }
 
-case object Actors {
-
-}
-
 object Main extends App {
   val system = MySystem()
 
@@ -201,10 +207,12 @@ object Main extends App {
 
   import akka.actor.{ Actor, DeadLetter, Props }
 
+  // Register a listener to send deadletter messages
   val listener = system.actorOf(Props(new Actor {
     def receive = {
-      case d: DeadLetter ⇒ println(d)
+      case d: DeadLetter => system.actorFor("../directMessager") ! "DeadLetter: " + d.toString()
     }
   }))
+
   system.eventStream.subscribe(listener, classOf[DeadLetter])
 }
