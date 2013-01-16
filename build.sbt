@@ -1,3 +1,5 @@
+import com.typesafe.sbt.SbtStartScript
+
 name := "Make ocremix easier to use"
 
 version := "0.1"
@@ -20,6 +22,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" % "akka-actor" % "2.0.4",
   "com.typesafe.akka" % "akka-agent" % "2.0.4"
 )
+
+
+seq(SbtStartScript.startScriptForClassesSettings: _*)
 
 //jerkson is broken with 2.10...
 //scalaVersion := "2.10.0-RC5"
