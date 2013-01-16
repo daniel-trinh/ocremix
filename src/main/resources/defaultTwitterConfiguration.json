@@ -1,5 +1,5 @@
 {
-  "characters_reserved_per_media": 21,
+  "characters_reserved_per_media": 23,
   "max_media_per_upload": 1,
   "non_username_paths": [
     "about",
@@ -109,6 +109,6 @@
       "w": 150
     }
   },
-  "short_url_length": 20,
-  "short_url_length_https": 21
+  "short_url_length": 22,
+  "short_url_length_https": 23
 }
