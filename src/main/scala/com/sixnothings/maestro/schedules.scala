@@ -147,7 +147,7 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
                 // remixes are ordered from newest to oldest, but we want to tweet oldest to newest,
                 // so reverse them
               }.reverse.foreach { untweetedRemix =>
-//                context.actorFor("../tweeter") ! untweetedRemix.toTweetable
+                context.actorFor("../tweeter") ! untweetedRemix.toTweetable
                 log.info(untweetedRemix.toTweetable.toString)
               }
             }
