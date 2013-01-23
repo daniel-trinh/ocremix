@@ -173,7 +173,8 @@ class Supervisor extends LoggedActor {
     initialDelay = 1 milliseconds,
     frequency    = 1 hour,
     receiver     = helloActor,
-    message      = "world")
+    message      = "world"
+  )
 
   val twitterConfigUpdaterSchedule = MySystem().scheduler.schedule(
     initialDelay = 0 seconds,
