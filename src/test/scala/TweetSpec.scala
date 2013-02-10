@@ -1,9 +1,5 @@
-import com.codahale.jerkson.AST.JValue
-import com.sixnothings.twitter.api.{Auth, ApiClient}
-import com.sixnothings.twitter.json.Tweet
 import org.scalatest.FunSpec
 import org.scalatest.BeforeAndAfter
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.ShouldMatchers
 import com.codahale.jerkson.Json._
 

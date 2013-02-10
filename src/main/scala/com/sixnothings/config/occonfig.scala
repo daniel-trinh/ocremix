@@ -14,6 +14,7 @@ trait ProjectSettings {
 
 case object TwitterSettings extends ProjectSettings {
   val defaultConfiguration = Source.fromURL(getClass.getResource("/defaultTwitterConfiguration.json"))
+
   val configuration = Agent(parse[TwitterConfiguration](defaultConfiguration))(MySystem())
 
   // TODO: figure out less verbose way of loading values from conf..
@@ -47,8 +48,8 @@ case object TwitterSettings extends ProjectSettings {
 
   val urlKeys = List("requestToken", "accessToken", "authorize", "api")
 
-  val twitterUrls = urlKeys.foldLeft(Map[String, String]()) {(
-    (urls, key) => urls + (key -> twitterUrlsConf.getString(key)))
+  val twitterUrls = urlKeys.foldLeft(Map[String, String]()) {
+    (urls, key) => urls + (key -> twitterUrlsConf.getString(key))
   }
 
 }
