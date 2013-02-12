@@ -42,7 +42,8 @@ The OAuth keys are the keys for the ocremix user. A Twitter application needs to
 This project is intended to deployed on Heroku's Cedar stack, on a worker dyno. Trying to deploy
 this on a web dyno will result in heroku barfing every 60 seconds and restarting the application.
 
-Two things are required to deploy on heroku, besides having a free tier working heroku account:
+Three things are required to deploy this on heroku (and have it work), besides having a free tier
+working heroku account:
 
 1) A Procfile in the root directory, with these contents:
 
@@ -52,3 +53,5 @@ worker: target/start Worker
 
 2) The sbt-start-script plugin installed as a project plugin -- heroku needs to be able to run
 sbt clean compile stage. The sbt plugin adds the stage command.
+
+3) OAuth credentials in application.conf (see Configuration section)
