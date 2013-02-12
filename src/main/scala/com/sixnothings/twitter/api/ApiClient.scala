@@ -11,6 +11,13 @@ class ApiClient(someOauth: Auth) {
 
   def api = url(TwitterSettings.twitterUrls("api"))
 
+  /**
+   * Sends a Twitter direct message.
+   *
+   * @param user The user to send a direct message to
+   * @param message The message to send to the user.
+   * @return Returns an Either containing a Right(success) message, or a Left(error) message.
+   */
   def directMessage(user: TwitterHandle, message: String): Promise[Either[String,String]] = {
     Http(
       api / "direct_messages" / "new.json"
@@ -30,6 +37,11 @@ class ApiClient(someOauth: Auth) {
     }
   }
 
+  /**
+   * Used to "tweet" a new status (the kind that has a 140 character limit).
+   *
+   * @param tweet A message to tweet.
+   */
   def statusesUpdate(tweet: Tweetable): Promise[Either[String,String]] = {
     Http(
       api / "statuses" / "update.json"
@@ -48,6 +60,14 @@ class ApiClient(someOauth: Auth) {
     }
   }
 
+  /**
+   * Used to retrieve a user's tweet timeline.
+   *
+   * @param userId The numerical Twitter ID of the user to retrieve timeline info from.
+   * @param screenName The name of the user to retrieve timeline info from.
+   * @param count The number of tweets to retrieve from the user's timeline.
+   * @return Returns an Either containing a Right(success) message, or a Left(error) message.
+   */
   def userTimeline(
     userId: String,
     screenName: String,
@@ -72,7 +92,11 @@ class ApiClient(someOauth: Auth) {
     }
   }
 
-  // this is pretty much just used to test that talking to twitter's API works
+  /**
+   * Used to retrieve Twitter's website configuration data. Contains info about t.co url length.
+   *
+   * @return Returns an Either containing a Right(success) message, or a Left(error) message.
+   */
   def helpConfiguration: Promise[Either[String, TwitterConfiguration]] = {
     Http(
       api / "help" / "configuration.json"
