@@ -8,11 +8,14 @@ import akka.event.Logging
 import com.sixnothings.ocremix.RSS
 import com.codahale.jerkson.Json._
 
+abstract class LoggedActor extends Actor {
+  val log = Logging(context.system, this)
+}
+
 /**
  * Used to enable actor logging in actor classes that inherit from this.
  */
-abstract class LoggedActor extends Actor {
-  val log = Logging(context.system, this)
+abstract class LoggedDirectMessageActor extends LoggedActor {
 
   override def preRestart(reason: Throwable, message: Option[Any]) {
     log.error(
@@ -29,7 +32,7 @@ abstract class LoggedActor extends Actor {
 /**
  * Dummy actor used for testing to make sure Akka is set up properly
  */
-class HelloActor extends LoggedActor {
+class HelloActor extends LoggedDirectMessageActor {
   def receive = {
     case "hello" => log.info("hello back at you")
     case "world" => context.actorFor("../world") ! "hello"
@@ -40,7 +43,7 @@ class HelloActor extends LoggedActor {
 /**
  * Dummy actor used for testing to make sure Akka is set up properly
  */
-class WorldActor extends LoggedActor {
+class WorldActor extends LoggedDirectMessageActor {
   def receive = {
     case "hello" => log.info("hello world!")
     case msg => log.info("wtf?" + msg.toString)
@@ -50,7 +53,7 @@ class WorldActor extends LoggedActor {
 /**
  * Used to update the TwitterSettings.configuration Agent.
  */
-class UpdateTwitterConfigActor(client: ApiClient) extends LoggedActor {
+class UpdateTwitterConfigActor(client: ApiClient) extends LoggedDirectMessageActor {
   def receive = {
     case "doit" => client.helpConfiguration.onSuccess {
       // onSuccess handles both success and failure, because
@@ -77,7 +80,7 @@ class UpdateTwitterConfigActor(client: ApiClient) extends LoggedActor {
  */
 class SendDirectMessageActor(
   client: ApiClient,
-  handle: TwitterHandle = TwitterSettings.panicHandle) extends LoggedActor {
+  handle: TwitterHandle = TwitterSettings.panicHandle) extends LoggedDirectMessageActor {
   // onSuccess handles both success and failure, because
   // client methods are designed to never throw an exception (by using
   // Either).
@@ -95,7 +98,7 @@ class SendDirectMessageActor(
 /**
  * Used to Tweetable messages to Twitter.
  */
-class TweeterActor(client: ApiClient) extends LoggedActor {
+class TweeterActor(client: ApiClient) extends LoggedDirectMessageActor {
   def receive = {
     case tweet @ Tweetable(message) => {
       // onSuccess handles both success and failure, because
@@ -115,7 +118,7 @@ class TweeterActor(client: ApiClient) extends LoggedActor {
  * Parses OCRemix RSS XML into a tweetable format, and then sends a message
  * to TweeterActor for tweeting
  */
-class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
+class OCRemixRssPollerActor(client: ApiClient) extends LoggedDirectMessageActor {
   def receive = {
     case "doit" => {
       RSS.fetch.onSuccess {
@@ -151,16 +154,14 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedActor {
                 log.info(untweetedRemix.toTweetable.toString)
               }
             }
-            case Left(error) => context.actorFor("../directmessager") ! error
           }
         }
-        case Left(error) => context.actorFor("../directmessager") ! error
       }
     }
   }
 }
 
-class Supervisor extends LoggedActor {
+class Supervisor extends LoggedDirectMessageActor {
 
   val helloActor     = context.actorOf(Props[HelloActor], name = "helloActor")
   val worldActor     = context.actorOf(Props[WorldActor], name = "world")

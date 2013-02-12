@@ -1,6 +1,6 @@
 import akka.agent.Agent
 import com.codahale.jerkson.Json._
-import com.sixnothings.maestro.MySystem
+import com.sixnothings.maestro.{LoggedDirectMessageActor, MySystem}
 import com.sixnothings.twitter.json.TwitterConfiguration
 import io.Source
 import scala.util.Random
@@ -16,9 +16,7 @@ import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
-import akka.testkit.DefaultTimeout
-import akka.testkit.ImplicitSender
-import akka.testkit.TestKit
+import akka.testkit.{TestActorRef, DefaultTimeout, ImplicitSender, TestKit}
 import akka.util.duration._
 
 
@@ -35,6 +33,7 @@ class TestKitUsageSpec
   val echoRef = system.actorOf(Props(new EchoActor))
   val forwardRef = system.actorOf(Props(new ForwardingActor(testActor)))
   val filterRef = system.actorOf(Props(new FilteringActor(testActor)))
+  val errorRef = TestActorRef(new ErrorActor)
   val randomHead = Random.nextInt(6)
   val randomTail = Random.nextInt(10)
   val headList = Seq().padTo(randomHead, "0")
@@ -46,11 +45,14 @@ class TestKitUsageSpec
     system.shutdown()
   }
 
-  "Agents" should {
-    "not blow up" in {
-      val defaultConfiguration = Source.fromURL(getClass.getResource("/defaultTwitterConfiguration.json"))
+  "LoggedDirectMessageActor" should {
+    "restart and log errors when an exception is thrown" in {
+      within(500 millis) {
+        intercept[AssertionError] {
+          errorRef.receive("test")
+        }
+      }
 
-      val configuration = Agent(parse[TwitterConfiguration](defaultConfiguration))(MySystem())
     }
   }
 
@@ -143,6 +145,15 @@ loglevel = "WARNING"
     def receive = {
       case msg: String ⇒ next ! msg
       case _ ⇒ None
+    }
+  }
+
+  /**
+   * An actor that throws an exception and logs the error
+   */
+  class ErrorActor extends LoggedDirectMessageActor {
+    def receive = {
+      case _ => throw new AssertionError("boom")
     }
   }
 

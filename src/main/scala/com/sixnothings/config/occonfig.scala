@@ -9,13 +9,16 @@ import com.sixnothings.maestro.MySystem
 
 
 trait ProjectSettings {
-  val base = ConfigFactory.load()
+  lazy val base = ConfigFactory.load()
 }
 
 case object TwitterSettings extends ProjectSettings {
-  val defaultConfiguration = Source.fromURL(getClass.getResource("/defaultTwitterConfiguration.json"))
 
-  val configuration = Agent(parse[TwitterConfiguration](defaultConfiguration))(MySystem())
+  // Order of initialization seems to be different from order defined in this object when running
+  // specs, so declare these vals as lazy instead as a workaround
+  lazy val defaultConfiguration = Source.fromURL(getClass.getResource("/defaultTwitterConfiguration.json"))
+
+  lazy val configuration = Agent(parse[TwitterConfiguration](defaultConfiguration))(MySystem())
 
   // TODO: figure out less verbose way of loading values from conf..
   // probably use a .json file and parse it into a case class using a magic json parser --
@@ -51,7 +54,6 @@ case object TwitterSettings extends ProjectSettings {
   val twitterUrls = urlKeys.foldLeft(Map[String, String]()) {
     (urls, key) => urls + (key -> twitterUrlsConf.getString(key))
   }
-
 }
 
 case object OCRemixSettings extends ProjectSettings {

@@ -1,6 +1,4 @@
-import com.sixnothings.ocremix.RemixEntry
-import com.sixnothings.ocremix.Remixer
-import org.scalatest.{PrivateMethodTester, FunSpec, BeforeAndAfter, BeforeAndAfterAll}
+import org.scalatest.{PrivateMethodTester, FunSpec, BeforeAndAfter}
 import org.scalatest.matchers.ShouldMatchers
 import com.sixnothings.ocremix._
 import scala._

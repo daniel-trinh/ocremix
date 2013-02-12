@@ -19,9 +19,9 @@ class TweetableSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with
   val tenChars = "0123456789"
 
   val shortMessageWithUrl         = "this link is pretty cool: http://www.twitter.com"
-  val longMessageWithUrl          = tenChars * 12 +
+  val longMessageWithUrl          = tenChars * 11 + "12345678" +
     "http://www.twitter.com/api1.1/help/configuration.json"
-  val longMessageWithUrlHttps     = tenChars * 11 + "123456789" +
+  val longMessageWithUrlHttps     = tenChars * 11 + "1234567" +
     "http://www.twitter.com/api1.1/help/configuration.json"
   val longMessageWithMultipleUrls = (twentyNineCharUrl + " ") * 6
 
@@ -71,13 +71,13 @@ class TweetableSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with
     // TODO: this code looks like it can be shortened
     describe("urls longer than tco shortened url limit") {
       it("no protocol url") {
-        Tweetable invokePrivate tcoShortenedUrlLength(twentyNineCharUrl) should be === 20
+        Tweetable invokePrivate tcoShortenedUrlLength(twentyNineCharUrl) should be === 22
       }
       it("https url") {
-        Tweetable invokePrivate tcoShortenedUrlLength(longHttpsUrl) should be === 21
+        Tweetable invokePrivate tcoShortenedUrlLength(longHttpsUrl) should be === 23
       }
       it("http url") {
-        Tweetable invokePrivate tcoShortenedUrlLength(longHttpUrl) should be === 20
+        Tweetable invokePrivate tcoShortenedUrlLength(longHttpUrl) should be === 22
       }
     }
 
@@ -100,7 +100,7 @@ class TweetableSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with
       Tweetable invokePrivate savedChars(longHttpUrl) should be === (longHttpUrl.length - Tweetable.shortUrlLength)
     }
     it("saved chars of a multi url message, urls separated by spaces") {
-      Tweetable invokePrivate savedChars(longMessageWithMultipleUrls) should be === 29 * 6 - 20 * 6
+      Tweetable invokePrivate savedChars(longMessageWithMultipleUrls) should be === 29 * 6 - 22 * 6
     }
   }
 }
