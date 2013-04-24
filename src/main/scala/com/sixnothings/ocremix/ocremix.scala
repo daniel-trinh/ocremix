@@ -1,13 +1,15 @@
 package com.sixnothings.ocremix
 
 import com.codahale.jerkson.Json._
-import dispatch._
+import dispatch._, Defaults._
 import java.util.concurrent.TimeUnit._
 import scala.xml
 import com.sixnothings.config.{TwitterSettings, OCRemixSettings}
 import com.sixnothings.twitter.api.Tweetable
 import com.ning.http.client.Response
 import xml.XML
+import scala.concurrent.duration.Duration
+
 
 case object OCRemix extends Enumeration {
   val rssUrl = url(OCRemixSettings.rssUrl)
@@ -21,6 +23,7 @@ case object OCRemix extends Enumeration {
  * @param writeupUrl Link to direct download remix or look at reviews.
  * @param songId Unique ID for remix, defined by OCR. Every remix has an ID.
  */
+
 case class RemixEntry(
   remixers: List[Remixer],
   composers: List[Composer],
@@ -100,9 +103,9 @@ case object RSS {
 
   val songIdRegex = """.*remix/OCR(\d+)/.*""".r
 
-  def fetch: Promise[Either[String, xml.Elem]] = {
+  def fetch: Future[Either[String, xml.Elem]] = {
     val response = Http(OCRemix.rssUrl OK as.xml.Elem).either
-    val retriedResponse = retry.Backoff(5, Duration(1000, MILLISECONDS), 2)(response)
+    val retriedResponse = retry.Backoff(5, Duration(1000, MILLISECONDS), 2)(() => response)
     retriedResponse.left.map { error =>
       """
         |Error fetching OCRemix RSS.
@@ -111,43 +114,51 @@ case object RSS {
     }
   }
 
-  def extractRemixes(xml: scala.xml.Elem): List[RemixEntry] = {
+  def extractRemixes(xml: scala.xml.Elem): List[Future[RemixEntry]] = {
     val xmlItems = xml \\ "channel" \ "item"
     (for { item <- xmlItems } yield extractRemixEntry(item)).toList
   }
 
-  private def extractRemixEntry(xmlItem: scala.xml.Node): RemixEntry = {
+  private def extractRemixEntry(xmlItem: scala.xml.Node): Future[RemixEntry] = {
+
     val remixLink = xmlItem \ "guid" text
     val songIdRegex(songId) = remixLink
-
     val descriptionSplitterRegex(gameGroup, remixersGroup, artistsGroup) = xmlItem \ "description" text
 
-    RemixEntry(
-      remixers = extractRemixers(remixersGroup),
-      composers = extractComposers(artistsGroup),
-      game = extractGame(gameGroup),
-      title = xmlItem \ "title" text,
-      youtubeUrl = extractYoutubeLink(remixLink),
-      writeupUrl = remixLink,
-      songId = songId.toInt
-    )
+    for (youtubeLink <- extractYoutubeLink(remixLink)) yield {
+      RemixEntry(
+        remixers = extractRemixers(remixersGroup),
+        composers = extractComposers(artistsGroup),
+        game = extractGame(gameGroup),
+        title = xmlItem \ "title" text,
+        youtubeUrl = youtubeLink,
+        writeupUrl = remixLink,
+        songId = songId.toInt
+      )
+    }
+
   }
 
   /**
    * Follows redirected links until a non 3xx status code is given or a limit is reached
    */
-  private def followRedirects(link: String, limit: Int = 10): Response = {
+  private def followRedirects(link: String, limit: Int = 10): Future[Response] = {
     assert(
       limit > 0,
       """Follow redirect limit has been reached, maybe in a redirect loop?
         |Link: %s""".stripMargin.format(link)
     )
-   val response = Http(url(link))()
 
-    response.getStatusCode match {
-      case code if code / 100 == 2 => response
-      case code if code / 100 == 3 => followRedirects(response.getHeader("Location"), limit - 1)
+    val res = for (response <- Http(url(link))) yield {
+      response.getStatusCode match {
+        case code if code / 100 == 2 => Future(response)
+        case code if code / 100 == 3 => {
+          followRedirects(response.getHeader("Location"), limit - 1)
+        }
+        case _ => throw new IllegalArgumentException("Invalid response retrieved")
+      }
     }
+    res.flatten
   }
 
   /**
@@ -157,21 +168,24 @@ case object RSS {
    * @throws MatchError when no youtube URL is found
    * @return A shareable youtube link of the OCRemix song.
    */
-  private def extractYoutubeLink(remixLink: String): String = {
+  private def extractYoutubeLink(remixLink: String): Future[String] = {
 
-    // parse out DTD since there is no way to cache the DTD download, and each download takes minutes
-    val noDTDRegex(noDocTypeBody) = followRedirects(remixLink).getResponseBody
+    for (res <- followRedirects(remixLink)) yield {
+      // parse out DTD since there is no way to cache the DTD download, and each download takes minutes
+      val noDTDRegex(noDocTypeBody) = res.getResponseBody
 
-    // hack to remove chars that require a proper DTD
-    val responseBody = XML.loadString(noDocTypeBody.replace("&nbsp;", "&#160;").replace("&raquo;","&#187;"))
+      // hack to remove chars that require a proper DTD
+      val responseBody = XML.loadString(noDocTypeBody.replace("&nbsp;", "&#160;").replace("&raquo;","&#187;"))
 
-    val embeddedYoutubeUrl = (responseBody \\ "_").filter {
-      _.attribute("id").filter(_.text=="ytplayer").isDefined
-    } \ "@data" text
+      val embeddedYoutubeUrl = (responseBody \\ "_").filter {
+        _.attribute("id").filter(_.text=="ytplayer").isDefined
+      } \ "@data" text
 
-    val embeddedYoutubeRegex(videoId) = embeddedYoutubeUrl
+      val embeddedYoutubeRegex(videoId) = embeddedYoutubeUrl
 
-    "http://www.youtube.com/watch?&v=" + videoId
+      "http://www.youtube.com/watch?&v=" + videoId
+    }
+
   }
 
   private def extractRemixers(remixerGroup: String): List[Remixer] = {
@@ -193,6 +207,7 @@ case object RSS {
     Game(url, name)
   }
 
+  
   def htmlDecode(str: String): String = {
     // Kind of ugly and inefficient, but it works
     str.replace("&amp;","&").

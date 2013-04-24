@@ -27,10 +27,19 @@ case object Tweetable {
   def twitterConfig: TwitterConfiguration = TwitterSettings.configuration()
 
   /**
+   * Returns the length of twitter's t.co service for http urls
+   *
    * The underscore casing is due to how Jerkson requires constructor attributes
    * to match key names
    */
   def shortUrlLength: Int      = twitterConfig.short_url_length
+
+  /**
+   * Returns the length of twitter's t.co service for https urls
+   *
+   * The underscore casing is due to how Jerkson requires constructor attributes
+   * to match key names
+   */
   def shortUrlLengthHttps: Int = twitterConfig.short_url_length_https
 
   /**

@@ -2,9 +2,9 @@ import com.typesafe.sbt.SbtStartScript
 
 name := "Make ocremix easier to use"
 
-version := "0.1"
+version := "0.2"
 
-scalaVersion := "2.9.2"
+scalaVersion := "2.9.3"
 
 resolvers ++= Seq(
   "Sonatype Repo" at "https://oss.sonatype.org/content/repositories/releases/",
@@ -14,11 +14,10 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "1.8" % "test",
-  "org.scalamock" %% "scalamock-scalatest-support" % "latest.integration" % "test",
+  "org.scalatest" %% "scalatest" % "1.9.1" % "test",
   "com.typesafe.akka" % "akka-testkit" % "2.0.4" % "test",
   "com.codahale" % "jerkson_2.9.1" % "0.5.0",
-  "net.databinder.dispatch" %% "dispatch-core" % "0.9.5",
+  "net.databinder.dispatch" %% "dispatch-core" % "0.10.0",
   "com.typesafe" % "config" % "1.0.0",
   "com.typesafe.akka" % "akka-actor" % "2.0.4",
   "com.typesafe.akka" % "akka-agent" % "2.0.4"

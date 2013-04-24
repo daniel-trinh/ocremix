@@ -1,6 +1,6 @@
 package com.sixnothings.twitter.api
 
-import dispatch._
+import dispatch._, Defaults._
 import dispatch.oauth._
 import com.codahale.jerkson.Json._
 import com.sixnothings.config._
@@ -18,7 +18,7 @@ class ApiClient(someOauth: Auth) {
    * @param message The message to send to the user.
    * @return Returns an Either containing a Right(success) message, or a Left(error) message.
    */
-  def directMessage(user: TwitterHandle, message: String): Promise[Either[String,String]] = {
+  def directMessage(user: TwitterHandle, message: String): Future[Either[String,String]] = {
     Http(
       api / "direct_messages" / "new.json"
       << Map(
@@ -41,8 +41,9 @@ class ApiClient(someOauth: Auth) {
    * Used to "tweet" a new status (the kind that has a 140 character limit).
    *
    * @param tweet A message to tweet.
+   * @return Returns a Promised Either containing a Right(success) message, or a Left(error) message.
    */
-  def statusesUpdate(tweet: Tweetable): Promise[Either[String,String]] = {
+  def statusesUpdate(tweet: Tweetable): Future[Either[String,String]] = {
     Http(
       api / "statuses" / "update.json"
       << Map (
@@ -71,7 +72,7 @@ class ApiClient(someOauth: Auth) {
   def userTimeline(
     userId: String,
     screenName: String,
-    count: Int): Promise[Either[String,String]] = {
+    count: Int): Future[Either[String,String]] = {
     Http(
       api / "statuses" / "user_timeline.json"
       <<? Map (
@@ -97,7 +98,7 @@ class ApiClient(someOauth: Auth) {
    *
    * @return Returns an Either containing a Right(success) message, or a Left(error) message.
    */
-  def helpConfiguration: Promise[Either[String, TwitterConfiguration]] = {
+  def helpConfiguration: Future[Either[String, TwitterConfiguration]] = {
     Http(
       api / "help" / "configuration.json"
       sign (twitterOauth.consumer, twitterOauth.accessKey)

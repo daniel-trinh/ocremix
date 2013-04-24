@@ -2,7 +2,10 @@ import org.scalatest.{PrivateMethodTester, FunSpec, BeforeAndAfter}
 import org.scalatest.matchers.ShouldMatchers
 import com.sixnothings.ocremix._
 import scala._
+import scala.concurrent.{Future, Await}
 import scala.xml.XML
+import dispatch.Defaults._
+import scala.concurrent.duration._
 
 class OcremixSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with PrivateMethodTester {
   val sample =
@@ -91,7 +94,9 @@ class OcremixSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with P
      val RSS.descriptionSplitterRegex(game, remixers, composers) = (XML.loadString(sample) \\ "item" \\ "description" head).text
 
      describe("extractRemixes") {
-      RSS.extractRemixes(XML.loadString(sample)) should be ===
+      val result = Await.result(Future.sequence(RSS.extractRemixes(XML.loadString(sample))), 10 seconds)
+
+      result should be ===
          List(
            RemixEntry(
              List(
@@ -202,8 +207,8 @@ class OcremixSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with P
 
      }
      describe("extractRemixEntry") {
-      val extractRemixEntry =  PrivateMethod[RemixEntry]('extractRemixEntry)
-       RSS invokePrivate extractRemixEntry(XML.loadString(sample) \\ "item" head) should be ===
+      val extractRemixEntry =  PrivateMethod[Future[RemixEntry]]('extractRemixEntry)
+       Await.result(RSS invokePrivate extractRemixEntry(XML.loadString(sample) \\ "item" head), 10 seconds) should be ===
          RemixEntry(
            List(
              Remixer("http://www.ocremix.org/artist/10671/chris-amaterasu","Chris ~ Amaterasu"),
@@ -216,8 +221,8 @@ class OcremixSpec extends FunSpec with BeforeAndAfter with ShouldMatchers with P
          )
      }
      describe("extractYoutubeLink") {
-       val extractYoutubeLink = PrivateMethod[String]('extractYoutubeLink)
-       RSS invokePrivate extractYoutubeLink("http://www.ocremix.org/remix/OCR02566/") should be === "http://www.youtube.com/watch?&v=5PRo-3jOi3A"
+       val extractYoutubeLink = PrivateMethod[Future[String]]('extractYoutubeLink)
+       Await.result(RSS invokePrivate extractYoutubeLink("http://www.ocremix.org/remix/OCR02566/"), 10 seconds) should be === "http://www.youtube.com/watch?&v=5PRo-3jOi3A"
      }
      describe("extractRemixers") {
        val extractRemixers = PrivateMethod[List[Remixer]]('extractRemixers)

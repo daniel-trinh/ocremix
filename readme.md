@@ -27,7 +27,7 @@ Exceptions are by default sent to the `panic` Twitter handle configured in the a
 
 ## Configuration
 
-OAuth keys and Twitter Handles are stored in this file. The application_template.conf file has
+OAuth keys and Twitter Handles are stored in this file. The application.conf file has
 a few other things filled out already, but the OAuth keys and Twitter handles are intentionally
 missing.
 

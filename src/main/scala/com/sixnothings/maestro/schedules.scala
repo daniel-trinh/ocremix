@@ -2,11 +2,16 @@ package com.sixnothings.maestro
 
 import akka.actor.{ Actor, ActorSystem, Props }
 import akka.util.duration._
+import dispatch.Defaults._
 import com.sixnothings.twitter.api.{Tweetable, Auth, ApiClient}
 import com.sixnothings.config.{TwitterHandle, TwitterSettings}
 import akka.event.Logging
 import com.sixnothings.ocremix.RSS
 import com.codahale.jerkson.Json._
+import dispatch._
+import scala.Left
+import scala.Right
+import com.sixnothings.config.TwitterHandle
 
 abstract class LoggedActor extends Actor {
   val log = Logging(context.system, this)
@@ -143,15 +148,20 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedDirectMessageActor 
                   case idRegex(id) => id
                 }
               }
-              // we only want to tweet the latest remixes
 
-              remixes.filter { remix =>
-                remix.songId > latestRemixTweetId.toInt
-                // remixes are ordered from newest to oldest, but we want to tweet oldest to newest,
-                // so reverse them
-              }.reverse.foreach { untweetedRemix =>
-                context.actorFor("../tweeter") ! untweetedRemix.toTweetable
-                log.info(untweetedRemix.toTweetable.toString)
+              // flip List[Future[RemixEntry]] to Future[List[RemixEntry]] for simpler processing
+              val sequencedRemixes = Future.sequence(remixes)
+
+              // we only want to tweet the latest remixes, in order they are posted
+              sequencedRemixes.map { remixes =>
+                remixes.view.filter { remix =>
+                  remix.songId > latestRemixTweetId.toInt
+                  // remixes are ordered from newest to oldest, but we want to tweet oldest to newest,
+                  // so reverse them
+                }.reverse.foreach { untweetedRemix =>
+                  context.actorFor("../tweeter") ! untweetedRemix.toTweetable
+                  log.info(untweetedRemix.toTweetable.toString)
+                }
               }
             }
           }
@@ -202,6 +212,17 @@ case object MySystem {
   val client = new ApiClient(new Auth(""))
 }
 
+/**
+ * The starting point of the application. Sets up four actors for parsing OCRemix's RSS:
+ * 1) [[com.sixnothings.maestro.OCRemixRssPollerActor]]
+ *    handles polling and parsing of the ocremix RSS URL. Sends new songs to [[com.sixnothings.maestro.TweeterActor]]
+ * 2) [[com.sixnothings.maestro.UpdateTwitterConfigActor]]
+ *    periodically updates the twitter t.co url shortening config, in case it has changed
+ * 3) [[com.sixnothings.maestro.SendDirectMessageActor]]
+ *    sends directMessages to an alt tweet user in case an error occurs
+ * 4) [[com.sixnothings.maestro.TweeterActor]]
+ *    posts new songs to Twitter
+ */
 object Main extends App {
   val system = MySystem()
 
