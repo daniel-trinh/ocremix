@@ -1,9 +1,12 @@
+import com.sixnothings.maestro.OCRemixTweet
 import org.scalatest.FunSpec
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.ShouldMatchers
-import com.codahale.jerkson.Json._
+import org.json4s.jackson.JsonMethods._
+import org.json4s.jackson.Serialization._
 
 class TweetSpec extends FunSpec with BeforeAndAfter with ShouldMatchers {
+  implicit val formats = org.json4s.DefaultFormats
 
   val ocremixTweet =
     """{
@@ -446,14 +449,14 @@ class TweetSpec extends FunSpec with BeforeAndAfter with ShouldMatchers {
     "2576: Super Dodge Ball 'Almost Frozen' by Rexy, Monobrow. Original by Kazuo Sawa. Y: http://t.co/GLWc4ofR W: http://t.co/dFqxOs0X"
 
   describe("Tweet") {
-    it("should serialize an OCRemix JSON tweet into a Map[String,Any] object") {
-      val parsedJson = parse[Map[String, Any]](ocremixTweet)
-      parsedJson("text") should be === firstTweet
+    it("should serialize an OCRemix JSON tweet into a case class") {
+      val parsedJson = parse(ocremixTweet).extract[OCRemixTweet]
+      parsedJson.text should be === firstTweet
     }
 
     it("should serialize an array of tweets into a List[Map[String,Any]] object") {
-      val parsedJson = parse[List[Map[String,Any]]](ocremixTweets)
-      parsedJson.head("text") should be === firstTweet
+      val parsedJson = parse(ocremixTweet).extract[OCRemixTweet]
+      parsedJson.text should be === firstTweet
     }
 
   }

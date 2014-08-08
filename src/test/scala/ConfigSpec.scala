@@ -33,7 +33,6 @@ class ConfigSpec extends FunSpec with BeforeAndAfter with ShouldMatchers {
       requiredUrls.foreach { elem =>
         TwitterSettings.twitterUrls(elem) should (not be null and not be "")
       }
-     requiredUrls match { case a @ Nil => 1; case _ => 2}
     }
   }
 }
