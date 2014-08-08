@@ -1,8 +1,10 @@
 package com.sixnothings.ocremix
 
-import com.codahale.jerkson.Json._
 import dispatch._, Defaults._
 import java.util.concurrent.TimeUnit._
+import org.jsoup.Jsoup
+
+import scala.util.Try
 import scala.xml
 import com.sixnothings.config.{TwitterSettings, OCRemixSettings}
 import com.sixnothings.twitter.api.Tweetable
@@ -103,15 +105,14 @@ case object RSS {
 
   val songIdRegex = """.*remix/OCR(\d+)/.*""".r
 
-  def fetch: Future[Either[String, xml.Elem]] = {
-    val response = Http(OCRemix.rssUrl OK as.xml.Elem).either
-    val retriedResponse = retry.Backoff(5, Duration(1000, MILLISECONDS), 2)(() => response)
-    retriedResponse.left.map { error =>
-      """
+  def fetch: Future[xml.Elem] = {
+    val response = Http(OCRemix.rssUrl OK as.xml.Elem)
+    response.transform(identity, { error =>
+      new Exception("""
         |Error fetching OCRemix RSS.
         |Error message: %s
-      """.format(error.getMessage).stripMargin
-    }
+      """.format(error.getMessage).stripMargin)
+    })
   }
 
   def extractRemixes(xml: scala.xml.Elem): List[Future[RemixEntry]] = {
@@ -126,7 +127,7 @@ case object RSS {
     val descriptionSplitterRegex(gameGroup, remixersGroup, artistsGroup) = xmlItem \ "description" text
 
     for (youtubeLink <- extractYoutubeLink(remixLink)) yield {
-      RemixEntry(
+      val x = RemixEntry(
         remixers = extractRemixers(remixersGroup),
         composers = extractComposers(artistsGroup),
         game = extractGame(gameGroup),
@@ -135,6 +136,7 @@ case object RSS {
         writeupUrl = remixLink,
         songId = songId.toInt
       )
+      x
     }
 
   }
@@ -169,23 +171,12 @@ case object RSS {
    * @return A shareable youtube link of the OCRemix song.
    */
   private def extractYoutubeLink(remixLink: String): Future[String] = {
-
     for (res <- followRedirects(remixLink)) yield {
-      // parse out DTD since there is no way to cache the DTD download, and each download takes minutes
-      val noDTDRegex(noDocTypeBody) = res.getResponseBody
-
-      // hack to remove chars that require a proper DTD
-      val responseBody = XML.loadString(noDocTypeBody.replace("&nbsp;", "&#160;").replace("&raquo;","&#187;"))
-
-      val embeddedYoutubeUrl = (responseBody \\ "_").filter {
-        _.attribute("id").filter(_.text=="ytplayer").isDefined
-      } \ "@data" text
-
+      val doc = Jsoup.parse(res.getResponseBody)
+      val embeddedYoutubeUrl = doc.select("#ytplayer").attr("data")
       val embeddedYoutubeRegex(videoId) = embeddedYoutubeUrl
-
       "http://www.youtube.com/watch?&v=" + videoId
     }
-
   }
 
   private def extractRemixers(remixerGroup: String): List[Remixer] = {

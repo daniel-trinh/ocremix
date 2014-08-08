@@ -2,10 +2,11 @@ package com.sixnothings.config
 import scala.io.Source
 import com.typesafe.config._
 import com.ning.http.client.oauth._
-import com.codahale.jerkson.Json._
 import com.sixnothings.twitter.json._
 import akka.agent.Agent
 import com.sixnothings.maestro.MySystem
+import org.json4s.jackson.JsonMethods._
+import org.json4s.jackson.Serialization._
 
 
 trait ProjectSettings {
@@ -14,11 +15,13 @@ trait ProjectSettings {
 
 case object TwitterSettings extends ProjectSettings {
 
+  implicit val formats = org.json4s.DefaultFormats
+
   // Order of initialization seems to be different from order defined in this object when running
   // specs, so declare these vals as lazy instead as a workaround
   lazy val defaultConfiguration = Source.fromURL(getClass.getResource("/defaultTwitterConfiguration.json"))
 
-  lazy val configuration = Agent(parse[TwitterConfiguration](defaultConfiguration))(MySystem())
+  lazy val configuration = Agent(parse(defaultConfiguration.getLines().mkString).extract[TwitterConfiguration])(MySystem().dispatcher)
 
   // TODO: figure out less verbose way of loading values from conf..
   // probably use a .json file and parse it into a case class using a magic json parser --

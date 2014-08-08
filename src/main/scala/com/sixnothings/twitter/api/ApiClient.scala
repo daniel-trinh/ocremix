@@ -2,11 +2,13 @@ package com.sixnothings.twitter.api
 
 import dispatch._, Defaults._
 import dispatch.oauth._
-import com.codahale.jerkson.Json._
+import org.json4s.jackson.JsonMethods._
+import org.json4s.jackson.Serialization._
 import com.sixnothings.config._
 import com.sixnothings.twitter.json._
 
 class ApiClient(someOauth: Auth) {
+  implicit val formats = org.json4s.DefaultFormats
   val twitterOauth = someOauth
 
   def api = url(TwitterSettings.twitterUrls("api"))
@@ -18,7 +20,7 @@ class ApiClient(someOauth: Auth) {
    * @param message The message to send to the user.
    * @return Returns an Either containing a Right(success) message, or a Left(error) message.
    */
-  def directMessage(user: TwitterHandle, message: String): Future[Either[String,String]] = {
+  def directMessage(user: TwitterHandle, message: String): Future[String] = {
     Http(
       api / "direct_messages" / "new.json"
       << Map(
@@ -28,13 +30,16 @@ class ApiClient(someOauth: Auth) {
       )
       sign (twitterOauth.consumer, twitterOauth.accessKey)
       OK as.String
-    ).either.left.map { error =>
-      """
-      |Error sending direct message to %s.
-      |Failed message contents: %s
-      |Error message: %s
-      """.format(user.screenName, message, error.getMessage).stripMargin
-    }
+    ).transform (
+      identity,
+      { error =>
+        new Exception("""
+        |Error sending direct message to %s.
+        |Failed message contents: %s
+        |Error message: %s
+        """.format(user.screenName, message, error.getMessage).stripMargin)
+      }
+    )
   }
 
   /**
@@ -43,7 +48,7 @@ class ApiClient(someOauth: Auth) {
    * @param tweet A message to tweet.
    * @return Returns a Promised Either containing a Right(success) message, or a Left(error) message.
    */
-  def statusesUpdate(tweet: Tweetable): Future[Either[String,String]] = {
+  def statusesUpdate(tweet: Tweetable): Future[String] = {
     Http(
       api / "statuses" / "update.json"
       << Map (
@@ -52,13 +57,13 @@ class ApiClient(someOauth: Auth) {
       )
       sign (twitterOauth.consumer, twitterOauth.accessKey)
       OK as.String
-    ).either.left.map { error =>
-      """
+    ).transform ( identity, error =>
+      new Exception("""
       |Error posting tweet.
       |Failed tweet message: %s
       |Error message: %s
-      """.format(tweet, error.getMessage).stripMargin
-    }
+      """.format(tweet, error.getMessage).stripMargin)
+    )
   }
 
   /**
@@ -72,7 +77,7 @@ class ApiClient(someOauth: Auth) {
   def userTimeline(
     userId: String,
     screenName: String,
-    count: Int): Future[Either[String,String]] = {
+    count: Int): Future[String] = {
     Http(
       api / "statuses" / "user_timeline.json"
       <<? Map (
@@ -83,14 +88,17 @@ class ApiClient(someOauth: Auth) {
       )
       sign (twitterOauth.consumer, twitterOauth.accessKey)
       OK as.String
-    ).either.left.map { error =>
-      """
-        |Error retrieving timeline.
-        |userId: %d
-        |screenName: %s
-        |count: %d
-      """.stripMargin.format(userId, screenName, count)
-    }
+    ).transform (
+      { x => x },
+      { error =>
+        new Exception("""
+          |Error retrieving timeline.
+          |userId: %d
+          |screenName: %s
+          |count: %d
+        """.stripMargin.format(userId, screenName, count))
+      }
+    )
   }
 
   /**
@@ -98,16 +106,20 @@ class ApiClient(someOauth: Auth) {
    *
    * @return Returns an Either containing a Right(success) message, or a Left(error) message.
    */
-  def helpConfiguration: Future[Either[String, TwitterConfiguration]] = {
+  def helpConfiguration: Future[TwitterConfiguration] = {
     Http(
       api / "help" / "configuration.json"
-      sign (twitterOauth.consumer, twitterOauth.accessKey)
-      OK as.String
-    ).either.left.map { error =>
-      """
-      |Error retrieving configuration.
-      |Error message: %s
-      """.format(error.getMessage).stripMargin
-    }.right.map { jsString => parse[TwitterConfiguration](jsString) }
+        sign(twitterOauth.consumer, twitterOauth.accessKey)
+        OK as.String
+    ).transform(
+    { x => parse(x).extract[TwitterConfiguration]}, { error =>
+      new Exception(
+        """
+          |Error retrieving configuration.
+          |Error message: %s
+        """
+          .format(error.getMessage).stripMargin)
+      }
+    )
   }
 }
