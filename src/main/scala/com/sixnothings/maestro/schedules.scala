@@ -150,7 +150,7 @@ class OCRemixRssPollerActor(client: ApiClient) extends LoggedDirectMessageActor 
               remix.songId > latestRemixTweetId.toInt
               // remixes are ordered from newest to oldest, but we want to tweet oldest to newest,
               // so reverse them
-            }.foreach { untweetedRemix =>
+            }.reverse.foreach { untweetedRemix =>
               context.actorSelection("../tweeter") ! untweetedRemix.toTweetable
               log.info(untweetedRemix.toTweetable.toString)
             }
